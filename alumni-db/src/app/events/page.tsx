@@ -25,7 +25,7 @@ export default function EventsPage() {
         <h1 className="text-2xl font-bold text-gray-900">Events</h1>
         <Link
           href="/events/new?type=event"
-          className="px-4 py-2 bg-[#7b1113] text-white rounded-md text-sm hover:bg-[#5a0d0f]"
+          className="px-4 py-2 bg-[#1a3a7a] text-white rounded-md text-sm hover:bg-[#0f2654]"
         >
           New Event
         </Link>

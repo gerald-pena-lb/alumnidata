@@ -123,16 +123,22 @@ db.exec(`
 const crypto = require("crypto");
 const userCount = db.prepare("SELECT COUNT(*) as count FROM users").get();
 if (userCount.count === 0) {
-  const salt = crypto.randomBytes(16).toString("hex");
-  const hash = crypto.scryptSync("admin123", salt, 64).toString("hex");
-  const passwordHash = `${salt}:${hash}`;
-  db.prepare("INSERT INTO users (username, password_hash, name, role) VALUES (?, ?, ?, ?)").run(
-    "admin",
-    passwordHash,
-    "Administrator",
-    "admin"
-  );
-  console.log("Default admin user created (admin / admin123)");
+  const users = [
+    { username: "admin", password: "admin123", name: "Administrator" },
+    { username: "gerald_pena", password: "ubag2004", name: "Gerald Pena" },
+  ];
+  for (const u of users) {
+    const salt = crypto.randomBytes(16).toString("hex");
+    const hash = crypto.scryptSync(u.password, salt, 64).toString("hex");
+    const passwordHash = `${salt}:${hash}`;
+    db.prepare("INSERT INTO users (username, password_hash, name, role) VALUES (?, ?, ?, ?)").run(
+      u.username,
+      passwordHash,
+      u.name,
+      "admin"
+    );
+  }
+  console.log("Admin users created (admin, gerald_pena)");
 }
 
 db.close();

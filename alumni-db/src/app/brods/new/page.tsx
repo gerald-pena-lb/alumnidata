@@ -150,7 +150,7 @@ export default function NewBrodPage() {
           <button
             type="submit"
             disabled={saving}
-            className="px-4 py-2 bg-[#7b1113] text-white rounded-md text-sm hover:bg-[#5a0d0f] disabled:opacity-50"
+            className="px-4 py-2 bg-[#1a3a7a] text-white rounded-md text-sm hover:bg-[#0f2654] disabled:opacity-50"
           >
             {saving ? "Saving..." : "Save Brod"}
           </button>

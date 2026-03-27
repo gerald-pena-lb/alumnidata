@@ -58,7 +58,7 @@ export default function ChatBox() {
       {/* Toggle Button */}
       <button
         onClick={() => setOpen(!open)}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-[#7b1113] text-white rounded-full shadow-lg hover:bg-[#5a0d0f] transition-colors flex items-center justify-center z-50"
+        className="fixed bottom-6 right-6 w-14 h-14 bg-[#1a3a7a] text-white rounded-full shadow-lg hover:bg-[#0f2654] transition-colors flex items-center justify-center z-50"
         title="AI Assistant"
       >
         {open ? (
@@ -76,7 +76,7 @@ export default function ChatBox() {
       {open && (
         <div className="fixed bottom-24 right-6 w-96 h-[500px] bg-white rounded-lg shadow-2xl flex flex-col z-50 border border-gray-200">
           {/* Header */}
-          <div className="bg-[#7b1113] text-white px-4 py-3 rounded-t-lg flex items-center justify-between">
+          <div className="bg-[#1a3a7a] text-white px-4 py-3 rounded-t-lg flex items-center justify-between">
             <div>
               <div className="font-semibold text-sm">AI Assistant</div>
               <div className="text-xs text-white/70">Ask about alumni data</div>
@@ -104,7 +104,7 @@ export default function ChatBox() {
                 <div
                   className={`max-w-[80%] rounded-lg px-3 py-2 text-sm whitespace-pre-wrap ${
                     msg.role === "user"
-                      ? "bg-[#7b1113] text-white"
+                      ? "bg-[#1a3a7a] text-white"
                       : "bg-gray-100 text-gray-800"
                   }`}
                 >
@@ -129,12 +129,12 @@ export default function ChatBox() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Type a message..."
-              className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7b1113] focus:border-transparent"
+              className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3a7a] focus:border-transparent"
             />
             <button
               type="submit"
               disabled={loading || !input.trim()}
-              className="px-3 py-2 bg-[#7b1113] text-white rounded-md text-sm hover:bg-[#5a0d0f] disabled:opacity-50"
+              className="px-3 py-2 bg-[#d4a843] text-white rounded-md text-sm hover:bg-[#b8922e] disabled:opacity-50"
             >
               Send
             </button>

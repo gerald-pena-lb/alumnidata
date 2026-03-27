@@ -96,7 +96,7 @@ export default function ReportsPage() {
                 <button
                   key={f}
                   onClick={() => setFilter(f)}
-                  className={`px-3 py-1.5 rounded-md text-sm ${filter === f ? "bg-[#7b1113] text-white" : "bg-gray-100 text-gray-700"}`}
+                  className={`px-3 py-1.5 rounded-md text-sm ${filter === f ? "bg-[#1a3a7a] text-white" : "bg-gray-100 text-gray-700"}`}
                 >
                   {f.charAt(0).toUpperCase() + f.slice(1)}
                 </button>
@@ -174,7 +174,7 @@ export default function ReportsPage() {
               </div>
               <div className="bg-white rounded-lg shadow p-5">
                 <div className="text-sm text-gray-500">Collection Rate</div>
-                <div className="text-2xl font-bold mt-1 text-[#7b1113]">{collectionRate.collection_rate}%</div>
+                <div className="text-2xl font-bold mt-1 text-[#1a3a7a]">{collectionRate.collection_rate}%</div>
               </div>
               <div className="bg-white rounded-lg shadow p-5">
                 <div className="text-sm text-gray-500">Total Collected</div>
