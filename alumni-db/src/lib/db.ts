@@ -112,12 +112,25 @@ function getDb() {
       event_id INTEGER NOT NULL,
       title TEXT NOT NULL,
       description TEXT,
+      section TEXT,
       assignee TEXT,
       priority TEXT DEFAULT 'medium' CHECK(priority IN ('low', 'medium', 'high')),
       status TEXT DEFAULT 'todo' CHECK(status IN ('todo', 'in_progress', 'done')),
       due_date TEXT,
       created_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS meeting_summaries (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT,
+      date TEXT,
+      location TEXT,
+      participants TEXT,
+      updates TEXT,
+      action_items TEXT,
+      raw_text TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
     );
   `);
 
