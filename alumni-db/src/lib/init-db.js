@@ -102,7 +102,7 @@ db.exec(`
     username TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
     name TEXT NOT NULL,
-    role TEXT DEFAULT 'member' CHECK(role IN ('admin', 'member')),
+    role TEXT DEFAULT 'viewer' CHECK(role IN ('admin', 'board_member', 'viewer')),
     created_at TEXT DEFAULT (datetime('now'))
   );
 

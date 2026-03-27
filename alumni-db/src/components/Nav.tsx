@@ -2,21 +2,28 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useAuth } from "@/components/AuthProvider";
 
-const links = [
-  { href: "/brods", label: "Brods" },
-  { href: "/projects", label: "Projects" },
-  { href: "/events", label: "Events" },
-  { href: "/minutes", label: "Minutes" },
-  { href: "/finances", label: "Finances" },
-  { href: "/reports", label: "Reports" },
+const allLinks = [
+  { href: "/brods", label: "Brods", minRole: "board_member" },
+  { href: "/projects", label: "Projects", minRole: "board_member" },
+  { href: "/events", label: "Events", minRole: "board_member" },
+  { href: "/minutes", label: "Minutes", minRole: "board_member" },
+  { href: "/finances", label: "Finances", minRole: "board_member" },
+  { href: "/reports", label: "Reports", minRole: "viewer" },
 ];
+
+const roleLevel: Record<string, number> = { viewer: 0, board_member: 1, admin: 2 };
 
 export default function Nav() {
   const pathname = usePathname();
   const router = useRouter();
+  const { user } = useAuth();
 
   if (pathname === "/login") return null;
+
+  const userLevel = roleLevel[user?.role || "viewer"] ?? 0;
+  const links = allLinks.filter((l) => userLevel >= roleLevel[l.minRole]);
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -45,9 +52,19 @@ export default function Nav() {
                 {link.label}
               </Link>
             ))}
+            <Link
+              href="/profile"
+              className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                pathname === "/profile"
+                  ? "bg-white/20 text-white"
+                  : "text-white/80 hover:bg-white/10 hover:text-white"
+              }`}
+            >
+              {user?.name?.split(" ")[0] || "Profile"}
+            </Link>
             <button
               onClick={handleLogout}
-              className="ml-4 px-3 py-1.5 text-sm text-white/70 hover:text-white hover:bg-white/10 rounded-md transition-colors"
+              className="ml-2 px-3 py-1.5 text-sm text-white/70 hover:text-white hover:bg-white/10 rounded-md transition-colors"
             >
               Logout
             </button>

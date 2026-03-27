@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import getDb from "@/lib/db";
+import { verifySessionToken } from "@/lib/auth";
 
 export async function GET(
   _req: NextRequest,
@@ -52,9 +53,15 @@ export async function PUT(
 }
 
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const token = req.cookies.get("session")?.value;
+  const session = token ? verifySessionToken(token) : null;
+  if (!session || session.role !== "admin") {
+    return NextResponse.json({ error: "Admin access required to delete members" }, { status: 403 });
+  }
+
   const { id } = await params;
   const db = getDb();
   db.prepare("DELETE FROM members WHERE id = ?").run(Number(id));

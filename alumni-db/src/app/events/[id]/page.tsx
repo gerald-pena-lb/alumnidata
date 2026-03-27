@@ -7,6 +7,7 @@ interface Task {
   id: number;
   title: string;
   description: string;
+  section: string;
   assignee: string;
   priority: string;
   status: string;
@@ -34,10 +35,12 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
   const [form, setForm] = useState({ name: "", description: "", date: "", type: "", status: "" });
   const [minuteForm, setMinuteForm] = useState({ date: "", content: "" });
   const [goalForm, setGoalForm] = useState({ description: "", minute_id: "" });
-  const [taskForm, setTaskForm] = useState({ title: "", description: "", assignee: "", priority: "medium", due_date: "" });
+  const [taskForm, setTaskForm] = useState({ title: "", description: "", section: "", assignee: "", priority: "medium", due_date: "" });
   const [showMinuteForm, setShowMinuteForm] = useState(false);
   const [showGoalForm, setShowGoalForm] = useState(false);
   const [showTaskForm, setShowTaskForm] = useState(false);
+  const [newSection, setNewSection] = useState("");
+  const [showSectionForm, setShowSectionForm] = useState(false);
 
   async function load() {
     const [eventRes, tasksRes] = await Promise.all([
@@ -126,7 +129,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
       body: JSON.stringify(taskForm),
     });
     setShowTaskForm(false);
-    setTaskForm({ title: "", description: "", assignee: "", priority: "medium", due_date: "" });
+    setTaskForm({ title: "", description: "", section: taskForm.section, assignee: "", priority: "medium", due_date: "" });
     load();
   }
 
@@ -148,11 +151,25 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
     load();
   }
 
-  const columns = [
-    { key: "todo", label: "To Do", color: "bg-gray-100" },
-    { key: "in_progress", label: "In Progress", color: "bg-yellow-50" },
-    { key: "done", label: "Done", color: "bg-green-50" },
-  ];
+  const sections = [...new Set(tasks.map((t) => t.section || "General"))].sort();
+  if (sections.length === 0) sections.push("General");
+
+  function addSection(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newSection.trim()) return;
+    setShowSectionForm(false);
+    setNewSection("");
+    // Just set the task form to use this section
+    setTaskForm((f) => ({ ...f, section: newSection.trim() }));
+    setShowTaskForm(true);
+  }
+
+  const statusColors: Record<string, string> = {
+    todo: "bg-gray-100 text-gray-600",
+    in_progress: "bg-yellow-100 text-yellow-800",
+    done: "bg-green-100 text-green-800",
+  };
+  const statusLabels: Record<string, string> = { todo: "To Do", in_progress: "In Progress", done: "Done" };
 
   const priorityColors: Record<string, string> = {
     high: "bg-red-100 text-red-700",
@@ -213,72 +230,111 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
         )}
       </div>
 
-      {/* Task Board */}
-      <div className="bg-white rounded-lg shadow p-6 mb-6">
+      {/* Sections & Tasks */}
+      <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Task Board</h2>
-          <button onClick={() => setShowTaskForm(!showTaskForm)} className="px-3 py-1.5 bg-[#1a3a7a] text-white rounded-md text-sm hover:bg-[#0f2654]">
-            Add Task
-          </button>
+          <h2 className="text-lg font-semibold text-gray-900">Sections & Tasks</h2>
+          <div className="flex gap-2">
+            <button onClick={() => setShowSectionForm(!showSectionForm)} className="px-3 py-1.5 bg-white border border-gray-300 rounded-md text-sm hover:bg-gray-50">
+              + Section
+            </button>
+            <button onClick={() => { setTaskForm((f) => ({ ...f, section: "" })); setShowTaskForm(!showTaskForm); }} className="px-3 py-1.5 bg-[#1a3a7a] text-white rounded-md text-sm hover:bg-[#0f2654]">
+              + Task
+            </button>
+          </div>
         </div>
+
+        {showSectionForm && (
+          <form onSubmit={addSection} className="bg-gray-50 rounded-md p-4 mb-4 flex gap-3 items-end">
+            <div className="flex-1">
+              <label className="block text-xs font-medium text-gray-600 mb-1">Section Name</label>
+              <input type="text" required value={newSection} onChange={(e) => setNewSection(e.target.value)} placeholder="e.g. Planning, Logistics, Marketing" className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" />
+            </div>
+            <button type="submit" className="px-4 py-2 bg-[#c9a227] text-white rounded-md text-sm hover:bg-[#b08f1f]">Create & Add Task</button>
+          </form>
+        )}
 
         {showTaskForm && (
           <form onSubmit={handleAddTask} className="bg-gray-50 rounded-md p-4 mb-4 space-y-3">
-            <input type="text" required placeholder="Task title" value={taskForm.title} onChange={(e) => setTaskForm((f) => ({ ...f, title: e.target.value }))} className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" />
+            <div className="grid grid-cols-2 gap-3">
+              <input type="text" required placeholder="Task title" value={taskForm.title} onChange={(e) => setTaskForm((f) => ({ ...f, title: e.target.value }))} className="border border-gray-300 rounded-md px-3 py-2 text-sm" />
+              <select value={taskForm.section} onChange={(e) => setTaskForm((f) => ({ ...f, section: e.target.value }))} className="border border-gray-300 rounded-md px-3 py-2 text-sm">
+                <option value="">General</option>
+                {sections.filter((s) => s !== "General").map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
             <textarea placeholder="Description (optional)" rows={2} value={taskForm.description} onChange={(e) => setTaskForm((f) => ({ ...f, description: e.target.value }))} className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" />
             <div className="grid grid-cols-3 gap-3">
-              <input type="text" placeholder="Assignee" value={taskForm.assignee} onChange={(e) => setTaskForm((f) => ({ ...f, assignee: e.target.value }))} className="border border-gray-300 rounded-md px-3 py-2 text-sm" />
+              <input type="text" placeholder="Assigned to" value={taskForm.assignee} onChange={(e) => setTaskForm((f) => ({ ...f, assignee: e.target.value }))} className="border border-gray-300 rounded-md px-3 py-2 text-sm" />
               <select value={taskForm.priority} onChange={(e) => setTaskForm((f) => ({ ...f, priority: e.target.value }))} className="border border-gray-300 rounded-md px-3 py-2 text-sm">
-                <option value="low">Low Priority</option>
-                <option value="medium">Medium Priority</option>
-                <option value="high">High Priority</option>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
               </select>
-              <input type="date" value={taskForm.due_date} onChange={(e) => setTaskForm((f) => ({ ...f, due_date: e.target.value }))} className="border border-gray-300 rounded-md px-3 py-2 text-sm" />
+              <input type="date" placeholder="Due date" value={taskForm.due_date} onChange={(e) => setTaskForm((f) => ({ ...f, due_date: e.target.value }))} className="border border-gray-300 rounded-md px-3 py-2 text-sm" />
             </div>
             <button type="submit" className="px-4 py-2 bg-[#1a3a7a] text-white rounded-md text-sm hover:bg-[#0f2654]">Add Task</button>
           </form>
         )}
 
-        <div className="grid grid-cols-3 gap-4">
-          {columns.map((col) => (
-            <div key={col.key} className={`${col.color} rounded-lg p-3 min-h-[200px]`}>
-              <div className="font-medium text-sm text-gray-700 mb-3 flex items-center justify-between">
-                {col.label}
-                <span className="bg-white px-2 py-0.5 rounded-full text-xs text-gray-500">
-                  {tasks.filter((t) => t.status === col.key).length}
-                </span>
-              </div>
-              <div className="space-y-2">
-                {tasks
-                  .filter((t) => t.status === col.key)
-                  .map((task) => (
-                    <div key={task.id} className="bg-white rounded-md p-3 shadow-sm border border-gray-100">
-                      <div className="flex items-start justify-between mb-1">
-                        <span className="text-sm font-medium text-gray-900">{task.title}</span>
-                        <button onClick={() => deleteTask(task.id)} className="text-gray-300 hover:text-red-500 text-xs ml-2">&times;</button>
-                      </div>
-                      {task.description && <p className="text-xs text-gray-500 mb-2">{task.description}</p>}
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${priorityColors[task.priority]}`}>
-                          {task.priority}
-                        </span>
-                        {task.assignee && <span className="text-xs text-gray-500">{task.assignee}</span>}
-                        {task.due_date && <span className="text-xs text-gray-400">{task.due_date}</span>}
-                      </div>
-                      <div className="flex gap-1 mt-2">
-                        {col.key !== "todo" && (
-                          <button onClick={() => moveTask(task.id, col.key === "done" ? "in_progress" : "todo")} className="text-xs text-gray-400 hover:text-gray-600">&larr;</button>
-                        )}
-                        {col.key !== "done" && (
-                          <button onClick={() => moveTask(task.id, col.key === "todo" ? "in_progress" : "done")} className="text-xs text-gray-400 hover:text-gray-600">&rarr;</button>
-                        )}
-                      </div>
+        {sections.map((section) => {
+          const sectionTasks = tasks.filter((t) => (t.section || "General") === section);
+          if (sectionTasks.length === 0 && section === "General" && sections.length > 1) return null;
+          const doneCount = sectionTasks.filter((t) => t.status === "done").length;
+          const progress = sectionTasks.length > 0 ? Math.round((doneCount / sectionTasks.length) * 100) : 0;
+
+          return (
+            <div key={section} className="bg-white rounded-lg shadow mb-4">
+              <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <h3 className="font-semibold text-gray-900 text-sm">{section}</h3>
+                  <span className="text-xs text-gray-400">{sectionTasks.length} task{sectionTasks.length !== 1 ? "s" : ""}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 text-xs text-gray-500">
+                    <div className="w-24 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                      <div className="h-full bg-green-500 rounded-full" style={{ width: `${progress}%` }} />
                     </div>
-                  ))}
+                    <span>{progress}%</span>
+                  </div>
+                  <button onClick={() => { setTaskForm((f) => ({ ...f, section })); setShowTaskForm(true); }} className="text-xs text-[#1a3a7a] hover:underline">+ Task</button>
+                </div>
+              </div>
+              <div className="divide-y divide-gray-50">
+                {sectionTasks.map((task) => (
+                  <div key={task.id} className="px-5 py-3 flex items-center gap-3 hover:bg-gray-50">
+                    <button
+                      onClick={() => moveTask(task.id, task.status === "todo" ? "in_progress" : task.status === "in_progress" ? "done" : "todo")}
+                      className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                        task.status === "done" ? "bg-green-500 border-green-500 text-white" :
+                        task.status === "in_progress" ? "border-yellow-400 bg-yellow-50" : "border-gray-300"
+                      }`}
+                    >
+                      {task.status === "done" && <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                    </button>
+                    <div className="flex-1 min-w-0">
+                      <div className={`text-sm ${task.status === "done" ? "line-through text-gray-400" : "text-gray-900"}`}>{task.title}</div>
+                      {task.description && <div className="text-xs text-gray-400 truncate">{task.description}</div>}
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {task.assignee && <span className="text-xs bg-blue-50 text-blue-700 rounded-full px-2 py-0.5">{task.assignee}</span>}
+                      {task.due_date && <span className="text-xs text-gray-400">{task.due_date}</span>}
+                      <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${statusColors[task.status]}`}>{statusLabels[task.status]}</span>
+                      <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${priorityColors[task.priority]}`}>{task.priority}</span>
+                      <button onClick={() => deleteTask(task.id)} className="text-gray-300 hover:text-red-500 text-sm">&times;</button>
+                    </div>
+                  </div>
+                ))}
+                {sectionTasks.length === 0 && (
+                  <div className="px-5 py-4 text-center text-gray-400 text-xs">No tasks in this section</div>
+                )}
               </div>
             </div>
-          ))}
-        </div>
+          );
+        })}
+        {tasks.length === 0 && !showTaskForm && (
+          <div className="bg-white rounded-lg shadow p-8 text-center text-gray-400 text-sm">No sections or tasks yet. Add a section to get started.</div>
+        )}
       </div>
 
       {/* Meeting Minutes */}

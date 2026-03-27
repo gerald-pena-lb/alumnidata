@@ -82,8 +82,8 @@ export async function POST(req: NextRequest) {
   }
 
   const result = db.prepare(`
-    INSERT INTO members (full_name, batch_name, batch_letter, year, phone_number, current_company, title, industry, status)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO members (full_name, chapter, batch_name, batch_letter, year, phone_number, current_company, title, industry, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     body.full_name,
     body.chapter || null,

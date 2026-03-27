@@ -3,6 +3,7 @@
 import { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { INDUSTRIES } from "@/lib/industries";
+import { useAuth } from "@/components/AuthProvider";
 
 interface Member {
   id: number;
@@ -29,6 +30,7 @@ interface Member {
 export default function BrodDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
+  const { user } = useAuth();
   const [member, setMember] = useState<Member | null>(null);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<Record<string, string>>({});
@@ -145,12 +147,12 @@ export default function BrodDetailPage({ params }: { params: Promise<{ id: strin
           >
             {editing ? "Cancel" : "Edit"}
           </button>
-          <button
+          {user?.role === "admin" && <button
             onClick={handleDelete}
             className="px-4 py-2 bg-red-600 text-white rounded-md text-sm hover:bg-red-700"
           >
             Delete
-          </button>
+          </button>}
         </div>
       </div>
 
