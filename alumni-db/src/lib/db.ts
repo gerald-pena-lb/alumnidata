@@ -1,6 +1,7 @@
 import Database from "better-sqlite3";
 import path from "path";
 import fs from "fs";
+import crypto from "crypto";
 
 const DB_PATH = process.env.VERCEL
   ? path.join("/tmp", "alumni.db")
@@ -119,6 +120,22 @@ function getDb() {
       FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE
     );
   `);
+
+  // Seed admin users if none exist
+  const userCount = db.prepare("SELECT COUNT(*) as count FROM users").get() as { count: number };
+  if (userCount.count === 0) {
+    const users = [
+      { username: "admin", password: "admin123", name: "Administrator" },
+      { username: "gerald_pena", password: "ubag2004", name: "Gerald Pena" },
+    ];
+    for (const u of users) {
+      const salt = crypto.randomBytes(16).toString("hex");
+      const hash = crypto.scryptSync(u.password, salt, 64).toString("hex");
+      db.prepare("INSERT INTO users (username, password_hash, name, role) VALUES (?, ?, ?, ?)").run(
+        u.username, `${salt}:${hash}`, u.name, "admin"
+      );
+    }
+  }
 
   return db;
 }
