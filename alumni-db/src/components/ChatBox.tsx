@@ -28,8 +28,6 @@ export default function ChatBox() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const phraseInterval = useRef<NodeJS.Timeout | null>(null);
 
-  if (pathname === "/login") return null;
-
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loadingPhrase]);
@@ -49,6 +47,8 @@ export default function ChatBox() {
       if (phraseInterval.current) clearInterval(phraseInterval.current);
     };
   }, [loading]);
+
+  if (pathname === "/login") return null;
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
