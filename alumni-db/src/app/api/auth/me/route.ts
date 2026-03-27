@@ -11,10 +11,12 @@ export async function GET(req: NextRequest) {
 
   const { data: user } = await supabase
     .from("app_users")
-    .select("id, username, name, role")
+    .select("id, username, display_name, role")
     .eq("id", session.userId)
     .single();
 
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 401 });
-  return NextResponse.json(user);
+
+  const role = user.role === "admin" ? "admin" : user.role === "board_member" ? "board_member" : "viewer";
+  return NextResponse.json({ id: user.id, username: user.username, name: user.display_name, role });
 }

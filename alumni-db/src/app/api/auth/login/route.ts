@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase, ensureAdminUsers } from "@/lib/supabase";
-import { verifyPassword, createSessionToken } from "@/lib/auth";
+import { createSessionToken } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
   const { username, password } = await req.json();
@@ -16,14 +16,15 @@ export async function POST(req: NextRequest) {
     .eq("username", username)
     .single();
 
-  if (!user || !verifyPassword(password, user.password_hash)) {
+  if (!user || user.password !== password) {
     return NextResponse.json({ error: "Invalid username or password" }, { status: 401 });
   }
 
-  const token = createSessionToken(user.id, user.username, user.role);
+  const role = user.role === "admin" ? "admin" : user.role === "board_member" ? "board_member" : "viewer";
+  const token = createSessionToken(user.id, user.username, role);
   const response = NextResponse.json({
     success: true,
-    user: { id: user.id, username: user.username, name: user.name, role: user.role },
+    user: { id: user.id, username: user.username, name: user.display_name, role },
   });
 
   response.cookies.set("session", token, {
