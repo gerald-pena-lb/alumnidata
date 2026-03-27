@@ -115,7 +115,7 @@ export default function FinancesPage() {
             />
           </div>
           <div className="bg-white rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
+            <div className="overflow-x-auto"><table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Member</th>
@@ -139,14 +139,14 @@ export default function FinancesPage() {
                   <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400 text-sm">No dues for {duesYear}</td></tr>
                 )}
               </tbody>
-            </table>
+            </table></div>
           </div>
         </div>
       )}
 
       {tab === "donations" && (
         <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
+          <div className="overflow-x-auto"><table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Member</th>
@@ -170,7 +170,7 @@ export default function FinancesPage() {
                 <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400 text-sm">No donations recorded</td></tr>
               )}
             </tbody>
-          </table>
+          </table></div>
         </div>
       )}
 
@@ -243,7 +243,7 @@ export default function FinancesPage() {
           )}
 
           <div className="bg-white rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
+            <div className="overflow-x-auto"><table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
@@ -267,7 +267,7 @@ export default function FinancesPage() {
                   <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400 text-sm">No expenditures recorded</td></tr>
                 )}
               </tbody>
-            </table>
+            </table></div>
           </div>
         </div>
       )}

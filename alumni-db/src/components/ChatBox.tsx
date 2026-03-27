@@ -107,7 +107,7 @@ export default function ChatBox() {
 
       {/* Chat Panel */}
       {open && (
-        <div className="fixed bottom-24 right-6 w-[400px] h-[540px] bg-white rounded-xl shadow-2xl flex flex-col z-50 border border-gray-200 overflow-hidden">
+        <div className="fixed bottom-24 right-4 left-4 sm:left-auto sm:w-[400px] h-[70vh] sm:h-[540px] bg-white rounded-xl shadow-2xl flex flex-col z-50 border border-gray-200 overflow-hidden">
           {/* Header */}
           <div className="bg-[#1e3a5f] text-white px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-3">

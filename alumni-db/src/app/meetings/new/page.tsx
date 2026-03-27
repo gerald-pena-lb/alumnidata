@@ -72,7 +72,7 @@ export default function NewMeetingPage() {
             <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
             <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Monthly General Assembly - April 2026" className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
               <input type="date" value={meetingDate} onChange={(e) => setMeetingDate(e.target.value)} className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" />
@@ -94,7 +94,7 @@ export default function NewMeetingPage() {
             <div key={i} className="flex gap-2 mb-2 items-center">
               <span className="w-6 h-6 rounded-full bg-[#c9a227] text-white text-xs flex items-center justify-center flex-shrink-0">{i + 1}</span>
               <input type="text" placeholder="Agenda item" value={a.item} onChange={(e) => updateAgendaItem(i, "item", e.target.value)} className="flex-1 border border-gray-300 rounded-md px-3 py-1.5 text-sm" />
-              <select value={a.assigned_to || ""} onChange={(e) => updateAgendaItem(i, "assigned_to", e.target.value)} className="w-40 border border-gray-300 rounded-md px-3 py-1.5 text-sm">
+              <select value={a.assigned_to || ""} onChange={(e) => updateAgendaItem(i, "assigned_to", e.target.value)} className="w-full sm:w-40 border border-gray-300 rounded-md px-3 py-1.5 text-sm">
                 <option value="">Assigned to</option>
                 {boardMembers.map((m) => <option key={m.id} value={m.full_name}>{m.full_name}</option>)}
               </select>

@@ -163,7 +163,7 @@ export default function BrodDetailPage({ params }: { params: Promise<{ id: strin
       <div className="bg-white rounded-lg shadow p-6 mb-6">
         {editing ? (
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Chapter</label>
                 <select
@@ -230,7 +230,7 @@ export default function BrodDetailPage({ params }: { params: Promise<{ id: strin
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Info label="Chapter" value={member.chapter} />
             <Info label="Batch" value={`${member.batch_name || ""} ${member.batch_letter ? `(${member.batch_letter})` : ""}`} />
             <Info label="Year" value={member.year?.toString()} />
@@ -304,7 +304,7 @@ export default function BrodDetailPage({ params }: { params: Promise<{ id: strin
           </form>
         )}
 
-        <table className="min-w-full divide-y divide-gray-200">
+        <div className="overflow-x-auto"><table className="min-w-full divide-y divide-gray-200">
           <thead>
             <tr>
               <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Year</th>
@@ -330,7 +330,7 @@ export default function BrodDetailPage({ params }: { params: Promise<{ id: strin
               </tr>
             )}
           </tbody>
-        </table>
+        </table></div>
       </div>
 
       {/* Donations */}
@@ -394,7 +394,7 @@ export default function BrodDetailPage({ params }: { params: Promise<{ id: strin
           </form>
         )}
 
-        <table className="min-w-full divide-y divide-gray-200">
+        <div className="overflow-x-auto"><table className="min-w-full divide-y divide-gray-200">
           <thead>
             <tr>
               <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Date</th>
@@ -420,7 +420,7 @@ export default function BrodDetailPage({ params }: { params: Promise<{ id: strin
               </tr>
             )}
           </tbody>
-        </table>
+        </table></div>
       </div>
     </div>
   );

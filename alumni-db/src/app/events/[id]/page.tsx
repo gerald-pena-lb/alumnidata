@@ -202,7 +202,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
           <div className="space-y-4">
             <input type="text" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" placeholder="Name" />
             <textarea value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} rows={3} className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" placeholder="Description" />
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <input type="date" value={form.date} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))} className="border border-gray-300 rounded-md px-3 py-2 text-sm" />
               <select value={form.type} onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))} className="border border-gray-300 rounded-md px-3 py-2 text-sm">
                 <option value="event">Event</option>
@@ -256,7 +256,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
 
         {showTaskForm && (
           <form onSubmit={handleAddTask} className="bg-gray-50 rounded-md p-4 mb-4 space-y-3">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <input type="text" required placeholder="Task title" value={taskForm.title} onChange={(e) => setTaskForm((f) => ({ ...f, title: e.target.value }))} className="border border-gray-300 rounded-md px-3 py-2 text-sm" />
               <select value={taskForm.section} onChange={(e) => setTaskForm((f) => ({ ...f, section: e.target.value }))} className="border border-gray-300 rounded-md px-3 py-2 text-sm">
                 <option value="">General</option>
@@ -264,7 +264,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
               </select>
             </div>
             <textarea placeholder="Description (optional)" rows={2} value={taskForm.description} onChange={(e) => setTaskForm((f) => ({ ...f, description: e.target.value }))} className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" />
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <input type="text" placeholder="Assigned to" value={taskForm.assignee} onChange={(e) => setTaskForm((f) => ({ ...f, assignee: e.target.value }))} className="border border-gray-300 rounded-md px-3 py-2 text-sm" />
               <select value={taskForm.priority} onChange={(e) => setTaskForm((f) => ({ ...f, priority: e.target.value }))} className="border border-gray-300 rounded-md px-3 py-2 text-sm">
                 <option value="low">Low</option>
@@ -406,7 +406,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
       {event.expenditures.length > 0 && (
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Expenditures</h2>
-          <table className="min-w-full divide-y divide-gray-200">
+          <div className="overflow-x-auto"><table className="min-w-full divide-y divide-gray-200">
             <thead>
               <tr>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Date</th>
@@ -423,7 +423,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         </div>
       )}
     </div>

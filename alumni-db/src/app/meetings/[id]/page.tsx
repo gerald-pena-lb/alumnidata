@@ -255,7 +255,7 @@ export default function MeetingDetailPage({ params }: { params: Promise<{ id: st
       {/* Meeting Info */}
       <div className="bg-white rounded-lg shadow p-6 mb-6">
         {editing ? (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div><label className="block text-xs font-medium text-gray-500 mb-1">Date</label><input type="date" value={meetingDate} onChange={(e) => setMeetingDate(e.target.value)} className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm" /></div>
             <div><label className="block text-xs font-medium text-gray-500 mb-1">Location</label><input type="text" value={location} onChange={(e) => setLocation(e.target.value)} className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm" /></div>
           </div>
@@ -279,7 +279,7 @@ export default function MeetingDetailPage({ params }: { params: Promise<{ id: st
               <div key={i} className="flex gap-2 mb-2 items-center">
                 <span className="w-6 h-6 rounded-full bg-[#c9a227] text-white text-xs flex items-center justify-center flex-shrink-0">{i + 1}</span>
                 <input type="text" placeholder="Agenda item" value={a.item} onChange={(e) => { const arr = [...agenda]; arr[i] = { ...arr[i], item: e.target.value }; setAgenda(arr); }} className="flex-1 border border-gray-300 rounded-md px-3 py-1.5 text-sm" />
-                <select value={a.assigned_to || ""} onChange={(e) => { const arr = [...agenda]; arr[i] = { ...arr[i], assigned_to: e.target.value || null }; setAgenda(arr); }} className="w-40 border border-gray-300 rounded-md px-3 py-1.5 text-sm">
+                <select value={a.assigned_to || ""} onChange={(e) => { const arr = [...agenda]; arr[i] = { ...arr[i], assigned_to: e.target.value || null }; setAgenda(arr); }} className="w-full sm:w-40 border border-gray-300 rounded-md px-3 py-1.5 text-sm">
                   <option value="">Assigned to</option>
                   {boardMembers.map((m) => <option key={m.id} value={m.full_name}>{m.full_name}</option>)}
                 </select>
@@ -357,7 +357,7 @@ export default function MeetingDetailPage({ params }: { params: Promise<{ id: st
               )}
 
               {selectedNextMeeting === "new" && (
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Meeting Title</label>
                     <input type="text" value={newMeetingTitle} onChange={(e) => setNewMeetingTitle(e.target.value)} placeholder="Follow-up Meeting" className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" />

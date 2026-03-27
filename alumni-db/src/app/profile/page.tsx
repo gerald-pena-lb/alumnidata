@@ -116,7 +116,7 @@ export default function ProfilePage() {
         </div>
 
         <form onSubmit={handleSaveProfile} className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
               <input type="text" required value={form.first_name} onChange={(e) => setForm((f) => ({ ...f, first_name: e.target.value }))} className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" />
@@ -156,7 +156,7 @@ export default function ProfilePage() {
       <div className="bg-white rounded-lg shadow p-6 mb-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Change Password</h2>
         <form onSubmit={handleChangePassword} className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
               <input type="password" required value={currentPw} onChange={(e) => setCurrentPw(e.target.value)} className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" />
@@ -177,7 +177,7 @@ export default function ProfilePage() {
       {user.role === "admin" && (
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Member Management</h2>
-          <table className="min-w-full divide-y divide-gray-200">
+          <div className="overflow-x-auto"><table className="min-w-full divide-y divide-gray-200">
             <thead>
               <tr>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Name</th>
@@ -219,7 +219,7 @@ export default function ProfilePage() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         </div>
       )}
     </div>
