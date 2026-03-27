@@ -8,7 +8,7 @@ const allLinks = [
   { href: "/brods", label: "Brods", minRole: "board_member" },
   { href: "/projects", label: "Projects", minRole: "board_member" },
   { href: "/events", label: "Events", minRole: "board_member" },
-  { href: "/minutes", label: "Minutes", minRole: "board_member" },
+  { href: "/meetings", label: "Meetings", minRole: "board_member" },
   { href: "/finances", label: "Finances", minRole: "board_member" },
   { href: "/reports", label: "Reports", minRole: "brod" },
 ];
