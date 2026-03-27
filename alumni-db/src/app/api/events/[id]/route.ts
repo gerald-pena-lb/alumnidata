@@ -1,49 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
-import getDb from "@/lib/db";
+import { supabase } from "@/lib/supabase";
 
-export async function GET(
-  _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const db = getDb();
-  const event = db.prepare("SELECT * FROM events WHERE id = ?").get(Number(id));
-  if (!event) {
-    db.close();
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
-  }
+  const { data: event } = await supabase.from("events").select("*").eq("id", Number(id)).single();
+  if (!event) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const minutes = db.prepare("SELECT * FROM meeting_minutes WHERE event_id = ? ORDER BY date DESC").all(Number(id));
-  const goals = db.prepare("SELECT * FROM goals WHERE event_id = ? ORDER BY created_at DESC").all(Number(id));
-  const expenditures = db.prepare("SELECT * FROM expenditures WHERE event_id = ? ORDER BY date DESC").all(Number(id));
-  db.close();
-  return NextResponse.json({ ...event as object, minutes, goals, expenditures });
+  const { data: minutes } = await supabase.from("meeting_minutes").select("*").eq("event_id", Number(id)).order("date", { ascending: false });
+  const { data: goals } = await supabase.from("goals").select("*").eq("event_id", Number(id)).order("created_at", { ascending: false });
+  const { data: expenditures } = await supabase.from("expenditures").select("*").eq("event_id", Number(id)).order("date", { ascending: false });
+
+  return NextResponse.json({ ...event, minutes: minutes || [], goals: goals || [], expenditures: expenditures || [] });
 }
 
-export async function PUT(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const db = getDb();
   const body = await req.json();
-
-  db.prepare(`
-    UPDATE events SET name = ?, description = ?, date = ?, type = ?, status = ?
-    WHERE id = ?
-  `).run(body.name, body.description || null, body.date, body.type, body.status, Number(id));
-
-  db.close();
+  await supabase.from("events").update({
+    name: body.name, description: body.description || null, date: body.date, type: body.type, status: body.status,
+  }).eq("id", Number(id));
   return NextResponse.json({ success: true });
 }
 
-export async function DELETE(
-  _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const db = getDb();
-  db.prepare("DELETE FROM events WHERE id = ?").run(Number(id));
-  db.close();
+  await supabase.from("events").delete().eq("id", Number(id));
   return NextResponse.json({ success: true });
 }

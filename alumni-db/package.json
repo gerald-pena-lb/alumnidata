@@ -4,12 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "node src/lib/init-db.js && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint"
   },
   "dependencies": {
-    "better-sqlite3": "^12.8.0",
+    "@supabase/supabase-js": "^2.49.1",
     "next": "^16.2.1",
     "papaparse": "^5.5.3",
     "react": "^19.2.4",
@@ -17,7 +17,6 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.2.2",
-    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^25.5.0",
     "@types/papaparse": "^5.5.2",
     "@types/react": "^19.2.14",

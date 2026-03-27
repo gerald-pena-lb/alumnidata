@@ -1,108 +1,53 @@
 import { NextRequest, NextResponse } from "next/server";
-import getDb from "@/lib/db";
+import { supabase } from "@/lib/supabase";
 
 export async function GET(req: NextRequest) {
-  const db = getDb();
   const url = new URL(req.url);
   const type = url.searchParams.get("type") || "financial";
-  const startDate = url.searchParams.get("start");
-  const endDate = url.searchParams.get("end");
-  const year = url.searchParams.get("year");
+  const year = url.searchParams.get("year") || String(new Date().getFullYear());
+  const start = url.searchParams.get("start");
+  const end = url.searchParams.get("end");
 
   if (type === "collection_rate") {
-    const duesYear = year || new Date().getFullYear().toString();
-    const totalMembers = db.prepare(
-      "SELECT COUNT(*) as count FROM members WHERE status = 'alive'"
-    ).get() as { count: number };
-    const paidMembers = db.prepare(
-      "SELECT COUNT(DISTINCT member_id) as count FROM annual_dues WHERE year = ?"
-    ).get(Number(duesYear)) as { count: number };
-    const totalCollected = db.prepare(
-      "SELECT COALESCE(SUM(amount), 0) as total FROM annual_dues WHERE year = ?"
-    ).get(Number(duesYear)) as { total: number };
+    const { count: activeCount } = await supabase.from("members").select("*", { count: "exact", head: true }).eq("status", "alive");
+    const { data: paidMembers } = await supabase.from("annual_dues").select("member_id").eq("year", Number(year));
+    const uniquePaid = new Set(paidMembers?.map((d) => d.member_id)).size;
+    const { data: duesData } = await supabase.from("annual_dues").select("amount").eq("year", Number(year));
+    const totalCollected = duesData?.reduce((sum, d) => sum + Number(d.amount), 0) || 0;
+    const active = activeCount || 0;
+    const rate = active > 0 ? ((uniquePaid / active) * 100).toFixed(1) : "0";
 
-    db.close();
     return NextResponse.json({
-      year: Number(duesYear),
-      total_active_members: totalMembers.count,
-      paid_members: paidMembers.count,
-      collection_rate: totalMembers.count > 0
-        ? ((paidMembers.count / totalMembers.count) * 100).toFixed(1)
-        : "0.0",
-      total_collected: totalCollected.total,
+      active_members: active, paid_members: uniquePaid,
+      collection_rate: rate, total_collected: totalCollected,
     });
   }
 
   // Financial report
-  let duesQuery = "SELECT COALESCE(SUM(amount), 0) as total FROM annual_dues WHERE 1=1";
-  let donationsQuery = "SELECT COALESCE(SUM(amount), 0) as total FROM donations WHERE 1=1";
-  let expendituresQuery = "SELECT COALESCE(SUM(amount), 0) as total FROM expenditures WHERE 1=1";
-  const duesParams: unknown[] = [];
-  const donationsParams: unknown[] = [];
-  const expendituresParams: unknown[] = [];
+  let duesQuery = supabase.from("annual_dues").select("amount, date_paid");
+  let donationsQuery = supabase.from("donations").select("amount, date_given");
+  let expendituresQuery = supabase.from("expenditures").select("amount, date");
 
-  if (startDate && endDate) {
-    duesQuery += " AND date_paid BETWEEN ? AND ?";
-    duesParams.push(startDate, endDate);
-    donationsQuery += " AND date_given BETWEEN ? AND ?";
-    donationsParams.push(startDate, endDate);
-    expendituresQuery += " AND date BETWEEN ? AND ?";
-    expendituresParams.push(startDate, endDate);
+  if (start && end) {
+    duesQuery = duesQuery.gte("date_paid", start).lte("date_paid", end);
+    donationsQuery = donationsQuery.gte("date_given", start).lte("date_given", end);
+    expendituresQuery = expendituresQuery.gte("date", start).lte("date", end);
+  } else {
+    duesQuery = duesQuery.eq("year", Number(year));
+    donationsQuery = donationsQuery.gte("date_given", `${year}-01-01`).lte("date_given", `${year}-12-31`);
+    expendituresQuery = expendituresQuery.gte("date", `${year}-01-01`).lte("date", `${year}-12-31`);
   }
 
-  const duesTotal = db.prepare(duesQuery).get(...duesParams) as { total: number };
-  const donationsTotal = db.prepare(donationsQuery).get(...donationsParams) as { total: number };
-  const expendituresTotal = db.prepare(expendituresQuery).get(...expendituresParams) as { total: number };
+  const [{ data: dues }, { data: donations }, { data: expenditures }] = await Promise.all([
+    duesQuery, donationsQuery, expendituresQuery,
+  ]);
 
-  // Breakdown by month
-  let duesBreakdown = `
-    SELECT strftime('%Y-%m', date_paid) as month, SUM(amount) as total
-    FROM annual_dues WHERE 1=1
-  `;
-  let donationsBreakdown = `
-    SELECT strftime('%Y-%m', date_given) as month, SUM(amount) as total
-    FROM donations WHERE 1=1
-  `;
-  let expBreakdown = `
-    SELECT strftime('%Y-%m', date) as month, SUM(amount) as total
-    FROM expenditures WHERE 1=1
-  `;
-
-  if (startDate && endDate) {
-    duesBreakdown += " AND date_paid BETWEEN ? AND ?";
-    donationsBreakdown += " AND date_given BETWEEN ? AND ?";
-    expBreakdown += " AND date BETWEEN ? AND ?";
-  }
-
-  duesBreakdown += " GROUP BY month ORDER BY month";
-  donationsBreakdown += " GROUP BY month ORDER BY month";
-  expBreakdown += " GROUP BY month ORDER BY month";
-
-  const duesMonthly = startDate && endDate
-    ? db.prepare(duesBreakdown).all(startDate, endDate)
-    : db.prepare(duesBreakdown).all();
-  const donationsMonthly = startDate && endDate
-    ? db.prepare(donationsBreakdown).all(startDate, endDate)
-    : db.prepare(donationsBreakdown).all();
-  const expMonthly = startDate && endDate
-    ? db.prepare(expBreakdown).all(startDate, endDate)
-    : db.prepare(expBreakdown).all();
-
-  db.close();
+  const duesTotal = dues?.reduce((s, d) => s + Number(d.amount), 0) || 0;
+  const donationsTotal = donations?.reduce((s, d) => s + Number(d.amount), 0) || 0;
+  const expendituresTotal = expenditures?.reduce((s, d) => s + Number(d.amount), 0) || 0;
 
   return NextResponse.json({
-    summary: {
-      total_dues: duesTotal.total,
-      total_donations: donationsTotal.total,
-      total_income: duesTotal.total + donationsTotal.total,
-      total_expenditures: expendituresTotal.total,
-      net: duesTotal.total + donationsTotal.total - expendituresTotal.total,
-    },
-    breakdown: {
-      dues: duesMonthly,
-      donations: donationsMonthly,
-      expenditures: expMonthly,
-    },
-    filters: { start: startDate, end: endDate },
+    dues_total: duesTotal, donations_total: donationsTotal,
+    expenditures_total: expendituresTotal, net: duesTotal + donationsTotal - expendituresTotal,
   });
 }

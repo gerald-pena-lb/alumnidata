@@ -1,71 +1,40 @@
 import { NextRequest, NextResponse } from "next/server";
-import getDb from "@/lib/db";
+import { supabase } from "@/lib/supabase";
 
-export async function GET(
-  _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const db = getDb();
-  const tasks = db.prepare("SELECT * FROM tasks WHERE event_id = ? ORDER BY priority DESC, created_at DESC").all(Number(id));
-  db.close();
-  return NextResponse.json(tasks);
+  const { data } = await supabase.from("tasks").select("*").eq("event_id", Number(id)).order("created_at", { ascending: false });
+  return NextResponse.json(data || []);
 }
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const db = getDb();
   const body = await req.json();
-
-  const result = db.prepare(`
-    INSERT INTO tasks (event_id, title, description, assignee, priority, status, due_date)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).run(
-    Number(id),
-    body.title,
-    body.description || null,
-    body.assignee || null,
-    body.priority || "medium",
-    body.status || "todo",
-    body.due_date || null
-  );
-
-  db.close();
-  return NextResponse.json({ id: result.lastInsertRowid }, { status: 201 });
+  const { data, error } = await supabase.from("tasks").insert({
+    event_id: Number(id), title: body.title, description: body.description || null,
+    section: body.section || null, assignee: body.assignee || null,
+    priority: body.priority || "medium", status: body.status || "todo", due_date: body.due_date || null,
+  }).select("id").single();
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ id: data.id }, { status: 201 });
 }
 
 export async function PUT(req: NextRequest) {
-  const db = getDb();
   const body = await req.json();
-
   if (body.status !== undefined && body.task_id) {
-    db.prepare("UPDATE tasks SET status = ? WHERE id = ?").run(body.status, body.task_id);
+    await supabase.from("tasks").update({ status: body.status }).eq("id", body.task_id);
   } else if (body.task_id) {
-    db.prepare(`
-      UPDATE tasks SET title = ?, description = ?, assignee = ?, priority = ?, status = ?, due_date = ?
-      WHERE id = ?
-    `).run(
-      body.title,
-      body.description || null,
-      body.assignee || null,
-      body.priority || "medium",
-      body.status || "todo",
-      body.due_date || null,
-      body.task_id
-    );
+    await supabase.from("tasks").update({
+      title: body.title, description: body.description || null, section: body.section || null,
+      assignee: body.assignee || null, priority: body.priority || "medium",
+      status: body.status || "todo", due_date: body.due_date || null,
+    }).eq("id", body.task_id);
   }
-
-  db.close();
   return NextResponse.json({ success: true });
 }
 
 export async function DELETE(req: NextRequest) {
-  const db = getDb();
   const { task_id } = await req.json();
-  db.prepare("DELETE FROM tasks WHERE id = ?").run(task_id);
-  db.close();
+  await supabase.from("tasks").delete().eq("id", task_id);
   return NextResponse.json({ success: true });
 }
