@@ -95,7 +95,45 @@ db.exec(`
     created_at TEXT DEFAULT (datetime('now')),
     FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE SET NULL
   );
+
+  CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    name TEXT NOT NULL,
+    role TEXT DEFAULT 'member' CHECK(role IN ('admin', 'member')),
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS tasks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT,
+    assignee TEXT,
+    priority TEXT DEFAULT 'medium' CHECK(priority IN ('low', 'medium', 'high')),
+    status TEXT DEFAULT 'todo' CHECK(status IN ('todo', 'in_progress', 'done')),
+    due_date TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE
+  );
 `);
+
+// Seed default admin user if no users exist
+const crypto = require("crypto");
+const userCount = db.prepare("SELECT COUNT(*) as count FROM users").get();
+if (userCount.count === 0) {
+  const salt = crypto.randomBytes(16).toString("hex");
+  const hash = crypto.scryptSync("admin123", salt, 64).toString("hex");
+  const passwordHash = `${salt}:${hash}`;
+  db.prepare("INSERT INTO users (username, password_hash, name, role) VALUES (?, ?, ?, ?)").run(
+    "admin",
+    passwordHash,
+    "Administrator",
+    "admin"
+  );
+  console.log("Default admin user created (admin / admin123)");
+}
 
 db.close();
 console.log("Database initialized at", DB_PATH);

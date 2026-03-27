@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Nav from "@/components/Nav";
+import ChatBox from "@/components/ChatBox";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -17,6 +18,7 @@ export default function RootLayout({
       <body className="bg-gray-50 min-h-screen">
         <Nav />
         <main className="max-w-7xl mx-auto px-4 py-6">{children}</main>
+        <ChatBox />
       </body>
     </html>
   );
