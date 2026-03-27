@@ -12,11 +12,11 @@ export async function POST(req: NextRequest) {
   if (!current_password || !new_password) return NextResponse.json({ error: "Both passwords required" }, { status: 400 });
   if (new_password.length < 6) return NextResponse.json({ error: "New password must be at least 6 characters" }, { status: 400 });
 
-  const { data: user } = await supabase.from("users").select("password_hash").eq("id", session.userId).single();
+  const { data: user } = await supabase.from("app_users").select("password_hash").eq("id", session.userId).single();
   if (!user || !verifyPassword(current_password, user.password_hash)) {
     return NextResponse.json({ error: "Current password is incorrect" }, { status: 401 });
   }
 
-  await supabase.from("users").update({ password_hash: hashPassword(new_password) }).eq("id", session.userId);
+  await supabase.from("app_users").update({ password_hash: hashPassword(new_password) }).eq("id", session.userId);
   return NextResponse.json({ success: true });
 }

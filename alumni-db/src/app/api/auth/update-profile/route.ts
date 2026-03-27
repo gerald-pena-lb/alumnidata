@@ -11,6 +11,6 @@ export async function PUT(req: NextRequest) {
   const { name } = await req.json();
   if (!name?.trim()) return NextResponse.json({ error: "Name is required" }, { status: 400 });
 
-  await supabase.from("users").update({ name: name.trim() }).eq("id", session.userId);
+  await supabase.from("app_users").update({ name: name.trim() }).eq("id", session.userId);
   return NextResponse.json({ success: true });
 }

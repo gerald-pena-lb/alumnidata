@@ -9,7 +9,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const { id } = await params;
   const { role } = await req.json();
-  await supabase.from("users").update({ role }).eq("id", Number(id));
+  await supabase.from("app_users").update({ role }).eq("id", Number(id));
   return NextResponse.json({ success: true });
 }
 
@@ -21,6 +21,6 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   const { id } = await params;
   if (Number(id) === session.userId) return NextResponse.json({ error: "Cannot delete your own account" }, { status: 400 });
 
-  await supabase.from("users").delete().eq("id", Number(id));
+  await supabase.from("app_users").delete().eq("id", Number(id));
   return NextResponse.json({ success: true });
 }

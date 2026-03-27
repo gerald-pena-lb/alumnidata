@@ -3,14 +3,14 @@ import { supabase } from "@/lib/supabase";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { data } = await supabase.from("tasks").select("*").eq("event_id", Number(id)).order("created_at", { ascending: false });
+  const { data } = await supabase.from("project_tasks").select("*").eq("event_id", Number(id)).order("created_at", { ascending: false });
   return NextResponse.json(data || []);
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const body = await req.json();
-  const { data, error } = await supabase.from("tasks").insert({
+  const { data, error } = await supabase.from("project_tasks").insert({
     event_id: Number(id), title: body.title, description: body.description || null,
     section: body.section || null, assignee: body.assignee || null,
     priority: body.priority || "medium", status: body.status || "todo", due_date: body.due_date || null,
@@ -22,9 +22,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 export async function PUT(req: NextRequest) {
   const body = await req.json();
   if (body.status !== undefined && body.task_id) {
-    await supabase.from("tasks").update({ status: body.status }).eq("id", body.task_id);
+    await supabase.from("project_tasks").update({ status: body.status }).eq("id", body.task_id);
   } else if (body.task_id) {
-    await supabase.from("tasks").update({
+    await supabase.from("project_tasks").update({
       title: body.title, description: body.description || null, section: body.section || null,
       assignee: body.assignee || null, priority: body.priority || "medium",
       status: body.status || "todo", due_date: body.due_date || null,
@@ -35,6 +35,6 @@ export async function PUT(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   const { task_id } = await req.json();
-  await supabase.from("tasks").delete().eq("id", task_id);
+  await supabase.from("project_tasks").delete().eq("id", task_id);
   return NextResponse.json({ success: true });
 }

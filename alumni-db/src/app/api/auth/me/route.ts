@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
   if (!session) return NextResponse.json({ error: "Invalid session" }, { status: 401 });
 
   const { data: user } = await supabase
-    .from("users")
+    .from("app_users")
     .select("id, username, name, role")
     .eq("id", session.userId)
     .single();

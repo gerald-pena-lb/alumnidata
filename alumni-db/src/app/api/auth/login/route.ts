@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
   await ensureAdminUsers();
 
   const { data: user } = await supabase
-    .from("users")
+    .from("app_users")
     .select("*")
     .eq("username", username)
     .single();

@@ -36,7 +36,7 @@ async function getDbContext(): Promise<string> {
   const { count: activeCount } = await supabase.from("members").select("*", { count: "exact", head: true }).eq("status", "alive");
   const { count: eventCount } = await supabase.from("events").select("*", { count: "exact", head: true });
   const { count: projectCount } = await supabase.from("events").select("*", { count: "exact", head: true }).eq("type", "project");
-  const { count: taskCount } = await supabase.from("tasks").select("*", { count: "exact", head: true });
+  const { count: taskCount } = await supabase.from("project_tasks").select("*", { count: "exact", head: true });
 
   const y = new Date().getFullYear();
   const { data: dues } = await supabase.from("annual_dues").select("amount").eq("year", y);
@@ -80,7 +80,7 @@ async function executeAction(payload: Record<string, unknown>): Promise<ActionRe
           for (const section of p.sections) {
             if (section.tasks) {
               for (const task of section.tasks) {
-                await supabase.from("tasks").insert({ event_id: data.id, title: task.name, description: task.description || null, section: section.name, status: "todo" });
+                await supabase.from("project_tasks").insert({ event_id: data.id, title: task.name, description: task.description || null, section: section.name, status: "todo" });
               }
               results.push({ label: `Section "${section.name}": ${section.tasks.length} task(s)`, success: true });
             }
