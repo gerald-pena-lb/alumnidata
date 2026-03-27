@@ -2,7 +2,9 @@ import Database from "better-sqlite3";
 import path from "path";
 import fs from "fs";
 
-const DB_PATH = path.join(process.cwd(), "data", "alumni.db");
+const DB_PATH = process.env.VERCEL
+  ? path.join("/tmp", "alumni.db")
+  : path.join(process.cwd(), "data", "alumni.db");
 
 function getDb() {
   const dir = path.dirname(DB_PATH);

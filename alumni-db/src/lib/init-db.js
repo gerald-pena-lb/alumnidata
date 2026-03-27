@@ -3,7 +3,9 @@ const Database = require("better-sqlite3");
 const path = require("path");
 const fs = require("fs");
 
-const DB_PATH = path.join(process.cwd(), "data", "alumni.db");
+const DB_PATH = process.env.VERCEL
+  ? path.join("/tmp", "alumni.db")
+  : path.join(process.cwd(), "data", "alumni.db");
 const dir = path.dirname(DB_PATH);
 
 if (!fs.existsSync(dir)) {
