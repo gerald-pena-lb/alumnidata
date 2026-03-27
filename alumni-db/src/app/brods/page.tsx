@@ -6,6 +6,8 @@ import { INDUSTRIES } from "@/lib/industries";
 
 interface Member {
   id: number;
+  first_name: string;
+  last_name: string;
   full_name: string;
   chapter: string;
   batch_name: string;
@@ -167,7 +169,8 @@ export default function BrodsPage() {
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Name</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">First Name</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Chapter</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Batch</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Year</th>
@@ -182,7 +185,12 @@ export default function BrodsPage() {
               <tr key={m.id} className="hover:bg-gray-50">
                 <td className="px-4 py-3 text-sm">
                   <Link href={`/brods/${m.id}`} className="text-[#1a3a7a] hover:underline font-medium">
-                    {m.full_name}
+                    {m.last_name}
+                  </Link>
+                </td>
+                <td className="px-4 py-3 text-sm">
+                  <Link href={`/brods/${m.id}`} className="text-[#1a3a7a] hover:underline">
+                    {m.first_name}
                   </Link>
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-600">{m.chapter}</td>
@@ -208,7 +216,7 @@ export default function BrodsPage() {
             ))}
             {members.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-4 py-8 text-center text-gray-500 text-sm">
+                <td colSpan={9} className="px-4 py-8 text-center text-gray-500 text-sm">
                   No members found. Add your first brod or upload a CSV.
                 </td>
               </tr>

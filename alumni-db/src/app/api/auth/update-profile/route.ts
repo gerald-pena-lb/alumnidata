@@ -11,8 +11,13 @@ export async function PUT(req: NextRequest) {
   const body = await req.json();
   const updates: Record<string, unknown> = {};
 
-  if (body.full_name) updates.full_name = body.full_name;
-  if (body.name) updates.full_name = body.name;
+  if (body.first_name !== undefined) updates.first_name = body.first_name;
+  if (body.last_name !== undefined) updates.last_name = body.last_name;
+  if (body.first_name !== undefined || body.last_name !== undefined) {
+    const fn = body.first_name ?? "";
+    const ln = body.last_name ?? "";
+    updates.full_name = `${fn} ${ln}`.trim();
+  }
   if (body.phone_number !== undefined) updates.phone_number = body.phone_number || null;
   if (body.current_company !== undefined) updates.current_company = body.current_company || null;
   if (body.title !== undefined) updates.title = body.title || null;

@@ -15,6 +15,8 @@ export async function ensureAdminUsers(): Promise<{ error?: string } | null> {
 
     if (count === 0 || count === null) {
       const { error: insertError } = await supabase.from("members").insert({
+        first_name: "Gerald",
+        last_name: "Pena",
         full_name: "Gerald Pena",
         username: "gerald",
         password_hash: "ubag1964",

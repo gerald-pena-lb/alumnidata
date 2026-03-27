@@ -7,6 +7,8 @@ interface User {
   id: number;
   username: string;
   name: string;
+  first_name: string;
+  last_name: string;
   full_name: string;
   role: "admin" | "board_member" | "brod";
   chapter?: string;

@@ -60,7 +60,7 @@ export default function Nav() {
                   : "text-white/80 hover:bg-white/10 hover:text-white"
               }`}
             >
-              {user?.name?.split(" ")[0] || "Profile"}
+              {user?.first_name || user?.name?.split(" ")[0] || "Profile"}
             </Link>
             <button
               onClick={handleLogout}

@@ -7,6 +7,8 @@ import { useAuth } from "@/components/AuthProvider";
 
 interface Member {
   id: number;
+  first_name: string;
+  last_name: string;
   full_name: string;
   chapter: string;
   batch_name: string;
@@ -50,7 +52,8 @@ export default function BrodDetailPage({ params }: { params: Promise<{ id: strin
     const data = await res.json();
     setMember(data);
     setForm({
-      full_name: data.full_name || "",
+      first_name: data.first_name || "",
+      last_name: data.last_name || "",
       chapter: data.chapter || "",
       batch_name: data.batch_name || "",
       batch_letter: data.batch_letter || "",
@@ -131,7 +134,7 @@ export default function BrodDetailPage({ params }: { params: Promise<{ id: strin
     <div className="max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">{member.full_name}</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{member.last_name}, {member.first_name}</h1>
           <span
             className={`px-2 py-1 rounded-full text-xs font-medium ${
               member.status === "alive" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"
@@ -175,7 +178,8 @@ export default function BrodDetailPage({ params }: { params: Promise<{ id: strin
                 </select>
               </div>
               {[
-                ["full_name", "Full Name"],
+                ["first_name", "First Name"],
+                ["last_name", "Last Name"],
                 ["batch_name", "Batch Name"],
                 ["batch_letter", "Batch Letter"],
                 ["year", "Year"],

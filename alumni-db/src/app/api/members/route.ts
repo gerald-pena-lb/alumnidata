@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   const status = url.searchParams.get("status");
   const chapter = url.searchParams.get("chapter");
 
-  if (search) query = query.ilike("full_name", `%${search}%`);
+  if (search) query = query.or(`first_name.ilike.%${search}%,last_name.ilike.%${search}%,full_name.ilike.%${search}%`);
   if (industry) query = query.eq("industry", industry);
   if (batch) query = query.or(`batch_name.ilike.%${batch}%,batch_letter.ilike.%${batch}%`);
   if (year) query = query.eq("year", Number(year));
@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  const { data } = await query.order("full_name");
+  const { data } = await query.order("last_name").order("first_name");
   return NextResponse.json(data || []);
 }
 
@@ -37,29 +37,42 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
 
   if (Array.isArray(body)) {
-    const rows = body.map((m: Record<string, unknown>) => ({
-      full_name: m.full_name,
-      chapter: m.chapter || null,
-      batch_name: m.batch_name || null,
-      batch_letter: m.batch_letter || null,
-      year: m.year || null,
-      phone_number: m.phone_number || null,
-      current_company: m.current_company || null,
-      title: m.title || null,
-      industry: m.industry || null,
-      status: m.status || "alive",
-      username: m.username || generateUsername(m.full_name as string),
-      password_hash: "masig123",
-      role: "brod",
-    }));
+    const rows = body.map((m: Record<string, unknown>) => {
+      const firstName = (m.first_name as string) || "";
+      const lastName = (m.last_name as string) || "";
+      const fullName = m.full_name || `${firstName} ${lastName}`.trim();
+      return {
+        first_name: firstName,
+        last_name: lastName,
+        full_name: fullName,
+        chapter: m.chapter || null,
+        batch_name: m.batch_name || null,
+        batch_letter: m.batch_letter || null,
+        year: m.year || null,
+        phone_number: m.phone_number || null,
+        current_company: m.current_company || null,
+        title: m.title || null,
+        industry: m.industry || null,
+        status: m.status || "alive",
+        username: m.username || generateUsername(fullName as string),
+        password_hash: "masig123",
+        role: "brod",
+      };
+    });
     const { error } = await supabase.from("members").insert(rows);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ success: true, count: rows.length }, { status: 201 });
   }
 
-  const username = body.username || generateUsername(body.full_name);
+  const firstName = body.first_name || "";
+  const lastName = body.last_name || "";
+  const fullName = `${firstName} ${lastName}`.trim();
+  const username = body.username || generateUsername(fullName);
+
   const { data, error } = await supabase.from("members").insert({
-    full_name: body.full_name,
+    first_name: firstName,
+    last_name: lastName,
+    full_name: fullName,
     chapter: body.chapter || null,
     batch_name: body.batch_name || null,
     batch_letter: body.batch_letter || null,

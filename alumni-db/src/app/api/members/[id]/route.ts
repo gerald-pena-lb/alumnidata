@@ -16,9 +16,14 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const body = await req.json();
+  const firstName = body.first_name ?? body.full_name?.split(" ")[0] ?? "";
+  const lastName = body.last_name ?? body.full_name?.split(" ").slice(1).join(" ") ?? "";
+  const fullName = `${firstName} ${lastName}`.trim();
 
   await supabase.from("members").update({
-    full_name: body.full_name,
+    first_name: firstName,
+    last_name: lastName,
+    full_name: fullName,
     chapter: body.chapter || null,
     batch_name: body.batch_name || null,
     batch_letter: body.batch_letter || null,

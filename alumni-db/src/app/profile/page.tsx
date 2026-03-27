@@ -6,7 +6,7 @@ import { INDUSTRIES } from "@/lib/industries";
 
 export default function ProfilePage() {
   const { user, refresh } = useAuth();
-  const [form, setForm] = useState({ full_name: "", phone_number: "", current_company: "", title: "", industry: "" });
+  const [form, setForm] = useState({ first_name: "", last_name: "", phone_number: "", current_company: "", title: "", industry: "" });
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
 
@@ -23,7 +23,8 @@ export default function ProfilePage() {
   useEffect(() => {
     if (user) {
       setForm({
-        full_name: user.full_name || user.name || "",
+        first_name: user.first_name || "",
+        last_name: user.last_name || "",
         phone_number: user.phone_number || "",
         current_company: user.current_company || "",
         title: user.title || "",
@@ -103,10 +104,10 @@ export default function ProfilePage() {
       <div className="bg-white rounded-lg shadow p-6 mb-6">
         <div className="flex items-center gap-4 mb-4">
           <div className="w-14 h-14 rounded-full bg-[#1a3a7a] text-white flex items-center justify-center text-xl font-bold">
-            {(user.full_name || user.name || "?").charAt(0).toUpperCase()}
+            {(user.first_name || "?").charAt(0).toUpperCase()}
           </div>
           <div>
-            <div className="font-semibold text-gray-900">{user.full_name || user.name}</div>
+            <div className="font-semibold text-gray-900">{user.first_name} {user.last_name}</div>
             <div className="text-sm text-gray-500">@{user.username}</div>
             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${roleColors[user.role]}`}>
               {roleLabels[user.role]}
@@ -117,8 +118,12 @@ export default function ProfilePage() {
         <form onSubmit={handleSaveProfile} className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-              <input type="text" required value={form.full_name} onChange={(e) => setForm((f) => ({ ...f, full_name: e.target.value }))} className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" />
+              <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+              <input type="text" required value={form.first_name} onChange={(e) => setForm((f) => ({ ...f, first_name: e.target.value }))} className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+              <input type="text" value={form.last_name} onChange={(e) => setForm((f) => ({ ...f, last_name: e.target.value }))} className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
@@ -184,7 +189,7 @@ export default function ProfilePage() {
             <tbody className="divide-y divide-gray-200">
               {members.map((m) => (
                 <tr key={m.id}>
-                  <td className="px-3 py-2 text-sm">{m.full_name || m.name}</td>
+                  <td className="px-3 py-2 text-sm">{m.full_name}</td>
                   <td className="px-3 py-2 text-sm text-gray-500">@{m.username}</td>
                   <td className="px-3 py-2 text-sm">
                     <select

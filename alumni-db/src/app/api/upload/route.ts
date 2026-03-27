@@ -16,12 +16,18 @@ function getField(row: Record<string, string>, ...keys: string[]): string {
   return "";
 }
 
-function getName(row: Record<string, string>): string {
-  const full = getField(row, "full_name", "fullname", "name", "member_name", "member");
-  if (full) return full;
-  const first = getField(row, "first_name", "firstname", "first");
-  const last = getField(row, "last_name", "lastname", "last", "surname");
-  return `${first} ${last}`.trim();
+function getNames(row: Record<string, string>): { first_name: string; last_name: string; full_name: string } {
+  let first = getField(row, "first_name", "firstname", "first");
+  let last = getField(row, "last_name", "lastname", "last", "surname");
+  if (!first && !last) {
+    const full = getField(row, "full_name", "fullname", "name", "member_name", "member");
+    if (full) {
+      const parts = full.split(" ");
+      first = parts[0] || "";
+      last = parts.slice(1).join(" ");
+    }
+  }
+  return { first_name: first, last_name: last, full_name: `${first} ${last}`.trim() };
 }
 
 export async function POST(req: NextRequest) {
@@ -41,7 +47,7 @@ export async function POST(req: NextRequest) {
 
     for (let i = 0; i < rows.length; i++) {
       const row = normalizeHeaders(rows[i]);
-      const fullName = getName(row);
+      const { first_name, last_name, full_name: fullName } = getNames(row);
       if (!fullName) { errors.push(`Row ${i + 1}: no name`); continue; }
 
       const chapterVal = getField(row, "chapter");
@@ -51,6 +57,8 @@ export async function POST(req: NextRequest) {
       const statusVal = getField(row, "status").toLowerCase();
 
       const { error } = await supabase.from("members").insert({
+        first_name,
+        last_name,
         full_name: fullName,
         chapter,
         batch_name: getField(row, "batch_name", "batchname", "batch") || null,
