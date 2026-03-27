@@ -213,7 +213,7 @@ function BreakdownTable({ title, data }: { title: string; data: { month: string;
               </tr>
             ))}
           </tbody>
-        </table></div>
+        </table>
       ) : (
         <div className="text-gray-400 text-sm">No data</div>
       )}

@@ -1,20 +1,33 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+let _supabase: SupabaseClient | null = null;
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+export function getSupabase(): SupabaseClient {
+  if (!_supabase) {
+    const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+    const key = process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+    _supabase = createClient(url, key);
+  }
+  return _supabase;
+}
+
+export const supabase = new Proxy({} as SupabaseClient, {
+  get(_target, prop) {
+    return (getSupabase() as unknown as Record<string | symbol, unknown>)[prop];
+  },
+});
 
 export async function ensureAdminUsers(): Promise<{ error?: string } | null> {
   try {
-    const { count, error: countError } = await supabase
+    const sb = getSupabase();
+    const { count, error: countError } = await sb
       .from("members")
       .select("*", { count: "exact", head: true })
       .eq("role", "admin");
     if (countError) return { error: `Count failed: ${countError.message}` };
 
     if (count === 0 || count === null) {
-      const { error: insertError } = await supabase.from("members").insert({
+      const { error: insertError } = await sb.from("members").insert({
         first_name: "Gerald",
         last_name: "Pena",
         full_name: "Gerald Pena",
