@@ -123,13 +123,14 @@ function getDb() {
 
     CREATE TABLE IF NOT EXISTS meeting_summaries (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      raw_text TEXT NOT NULL,
       title TEXT,
-      date TEXT,
+      meeting_date TEXT,
       location TEXT,
-      participants TEXT,
-      updates TEXT,
-      action_items TEXT,
-      raw_text TEXT,
+      participants TEXT DEFAULT '[]',
+      updates TEXT DEFAULT '[]',
+      action_items TEXT DEFAULT '[]',
+      previous_action_items TEXT DEFAULT '[]',
       created_at TEXT DEFAULT (datetime('now'))
     );
   `);

@@ -183,7 +183,7 @@ function executeAction(payload: Record<string, unknown>): ActionResult[] {
 
       case "upload_minutes": {
         const { raw_text } = payload as { raw_text: string };
-        db.prepare("INSERT INTO meeting_summaries (raw_text, date) VALUES (?, ?)").run(
+        db.prepare("INSERT INTO meeting_summaries (raw_text, meeting_date) VALUES (?, ?)").run(
           raw_text, new Date().toISOString().slice(0, 10)
         );
         results.push({ label: "Meeting minutes uploaded and saved", success: true });
