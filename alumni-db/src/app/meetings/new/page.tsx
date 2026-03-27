@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 interface AgendaItem { item: string; assigned_to: string | null; }
+interface BoardMember { id: number; full_name: string; }
 
 export default function NewMeetingPage() {
   const router = useRouter();
@@ -12,6 +13,13 @@ export default function NewMeetingPage() {
   const [location, setLocation] = useState("");
   const [agenda, setAgenda] = useState<AgendaItem[]>([{ item: "", assigned_to: null }]);
   const [saving, setSaving] = useState(false);
+  const [boardMembers, setBoardMembers] = useState<BoardMember[]>([]);
+
+  useEffect(() => {
+    fetch("/api/members?role=board_and_admin")
+      .then((r) => r.json())
+      .then((data) => setBoardMembers(data));
+  }, []);
 
   function addAgendaItem() {
     setAgenda([...agenda, { item: "", assigned_to: null }]);
@@ -86,7 +94,10 @@ export default function NewMeetingPage() {
             <div key={i} className="flex gap-2 mb-2 items-center">
               <span className="w-6 h-6 rounded-full bg-[#c9a227] text-white text-xs flex items-center justify-center flex-shrink-0">{i + 1}</span>
               <input type="text" placeholder="Agenda item" value={a.item} onChange={(e) => updateAgendaItem(i, "item", e.target.value)} className="flex-1 border border-gray-300 rounded-md px-3 py-1.5 text-sm" />
-              <input type="text" placeholder="Assigned to" value={a.assigned_to || ""} onChange={(e) => updateAgendaItem(i, "assigned_to", e.target.value)} className="w-36 border border-gray-300 rounded-md px-3 py-1.5 text-sm" />
+              <select value={a.assigned_to || ""} onChange={(e) => updateAgendaItem(i, "assigned_to", e.target.value)} className="w-40 border border-gray-300 rounded-md px-3 py-1.5 text-sm">
+                <option value="">Assigned to</option>
+                {boardMembers.map((m) => <option key={m.id} value={m.full_name}>{m.full_name}</option>)}
+              </select>
               {agenda.length > 1 && (
                 <button type="button" onClick={() => removeAgendaItem(i)} className="text-red-400 hover:text-red-600">&times;</button>
               )}

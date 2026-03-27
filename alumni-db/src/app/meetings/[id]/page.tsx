@@ -37,6 +37,8 @@ function formatDateLong(d: string): string {
   return date.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
 }
 
+interface BoardMember { id: number; full_name: string; }
+
 export default function MeetingDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
@@ -68,6 +70,7 @@ export default function MeetingDetailPage({ params }: { params: Promise<{ id: st
   const [actionItems, setActionItems] = useState<ActionItem[]>([]);
   const [prevItems, setPrevItems] = useState<PrevActionItem[]>([]);
   const [agenda, setAgenda] = useState<AgendaItem[]>([]);
+  const [boardMembers, setBoardMembers] = useState<BoardMember[]>([]);
 
   useEffect(() => {
     if (summarizing) {
@@ -93,7 +96,10 @@ export default function MeetingDetailPage({ params }: { params: Promise<{ id: st
     setAgenda(d.agenda || []);
   }
 
-  useEffect(() => { load(); }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    load();
+    fetch("/api/members?role=board_and_admin").then((r) => r.json()).then(setBoardMembers);
+  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleDelete() {
     await fetch(`/api/minutes/${id}`, { method: "DELETE" });
@@ -273,7 +279,10 @@ export default function MeetingDetailPage({ params }: { params: Promise<{ id: st
               <div key={i} className="flex gap-2 mb-2 items-center">
                 <span className="w-6 h-6 rounded-full bg-[#c9a227] text-white text-xs flex items-center justify-center flex-shrink-0">{i + 1}</span>
                 <input type="text" placeholder="Agenda item" value={a.item} onChange={(e) => { const arr = [...agenda]; arr[i] = { ...arr[i], item: e.target.value }; setAgenda(arr); }} className="flex-1 border border-gray-300 rounded-md px-3 py-1.5 text-sm" />
-                <input type="text" placeholder="Assigned to" value={a.assigned_to || ""} onChange={(e) => { const arr = [...agenda]; arr[i] = { ...arr[i], assigned_to: e.target.value || null }; setAgenda(arr); }} className="w-36 border border-gray-300 rounded-md px-3 py-1.5 text-sm" />
+                <select value={a.assigned_to || ""} onChange={(e) => { const arr = [...agenda]; arr[i] = { ...arr[i], assigned_to: e.target.value || null }; setAgenda(arr); }} className="w-40 border border-gray-300 rounded-md px-3 py-1.5 text-sm">
+                  <option value="">Assigned to</option>
+                  {boardMembers.map((m) => <option key={m.id} value={m.full_name}>{m.full_name}</option>)}
+                </select>
                 <button onClick={() => setAgenda(agenda.filter((_, j) => j !== i))} className="text-red-400 hover:text-red-600">&times;</button>
               </div>
             ))

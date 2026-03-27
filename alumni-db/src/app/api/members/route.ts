@@ -20,6 +20,14 @@ export async function GET(req: NextRequest) {
   if (titleFilter) query = query.ilike("title", `%${titleFilter}%`);
   if (status) query = query.eq("status", status);
   if (chapter) query = query.eq("chapter", chapter);
+  const role = url.searchParams.get("role");
+  if (role) {
+    if (role === "board_and_admin") {
+      query = query.in("role", ["board_member", "admin"]);
+    } else {
+      query = query.eq("role", role);
+    }
+  }
 
   const { data } = await query.order("full_name");
   return NextResponse.json(data || []);
