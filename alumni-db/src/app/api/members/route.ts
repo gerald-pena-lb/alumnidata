@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { supabase, generateUsername } from "@/lib/supabase";
 
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);
@@ -29,24 +29,27 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
 
   if (Array.isArray(body)) {
-    const { error } = await supabase.from("members").insert(
-      body.map((m: Record<string, unknown>) => ({
-        full_name: m.full_name,
-        chapter: m.chapter || null,
-        batch_name: m.batch_name || null,
-        batch_letter: m.batch_letter || null,
-        year: m.year || null,
-        phone_number: m.phone_number || null,
-        current_company: m.current_company || null,
-        title: m.title || null,
-        industry: m.industry || null,
-        status: m.status || "alive",
-      }))
-    );
+    const rows = body.map((m: Record<string, unknown>) => ({
+      full_name: m.full_name,
+      chapter: m.chapter || null,
+      batch_name: m.batch_name || null,
+      batch_letter: m.batch_letter || null,
+      year: m.year || null,
+      phone_number: m.phone_number || null,
+      current_company: m.current_company || null,
+      title: m.title || null,
+      industry: m.industry || null,
+      status: m.status || "alive",
+      username: m.username || generateUsername(m.full_name as string),
+      password_hash: "masig123",
+      role: "brod",
+    }));
+    const { error } = await supabase.from("members").insert(rows);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return NextResponse.json({ success: true, count: body.length }, { status: 201 });
+    return NextResponse.json({ success: true, count: rows.length }, { status: 201 });
   }
 
+  const username = body.username || generateUsername(body.full_name);
   const { data, error } = await supabase.from("members").insert({
     full_name: body.full_name,
     chapter: body.chapter || null,
@@ -58,6 +61,9 @@ export async function POST(req: NextRequest) {
     title: body.title || null,
     industry: body.industry || null,
     status: body.status || "alive",
+    username,
+    password_hash: "masig123",
+    role: body.role || "brod",
   }).select("id").single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

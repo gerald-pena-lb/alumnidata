@@ -7,18 +7,29 @@ export const supabase = createClient(supabaseUrl, supabaseKey);
 
 export async function ensureAdminUsers(): Promise<{ error?: string } | null> {
   try {
-    const { count, error: countError } = await supabase.from("users").select("*", { count: "exact", head: true });
+    const { count, error: countError } = await supabase
+      .from("members")
+      .select("*", { count: "exact", head: true })
+      .eq("role", "admin");
     if (countError) return { error: `Count failed: ${countError.message}` };
 
     if (count === 0 || count === null) {
-      const { error: insertError } = await supabase.from("users").insert([
-        { username: "Gerald", password_hash: "ubag1964", name: "Gerald", role: "admin" },
-        { username: "admin", password_hash: "admin123", name: "Administrator", role: "admin" },
-      ]);
+      const { error: insertError } = await supabase.from("members").insert({
+        full_name: "Gerald Pena",
+        username: "gerald",
+        password_hash: "ubag1964",
+        role: "admin",
+        chapter: "Manila",
+        status: "alive",
+      });
       if (insertError) return { error: `Insert failed: ${insertError.message}` };
     }
     return null;
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Unknown error" };
   }
+}
+
+export function generateUsername(fullName: string): string {
+  return fullName.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim().replace(/\s+/g, ".");
 }

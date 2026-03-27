@@ -7,7 +7,14 @@ interface User {
   id: number;
   username: string;
   name: string;
-  role: "admin" | "board_member" | "viewer";
+  full_name: string;
+  role: "admin" | "board_member" | "brod";
+  chapter?: string;
+  batch_name?: string;
+  phone_number?: string;
+  current_company?: string;
+  title?: string;
+  industry?: string;
 }
 
 interface AuthCtx {
@@ -28,7 +35,6 @@ export function useAuth() {
   return useContext(AuthContext);
 }
 
-// Permission matrix
 function checkPermission(role: string | undefined, action: string): boolean {
   if (!role) return false;
   if (role === "admin") return true;
@@ -42,15 +48,16 @@ function checkPermission(role: string | undefined, action: string): boolean {
     "view_minutes", "add_minutes", "edit_minutes", "delete_minutes",
     "view_tasks", "add_tasks", "edit_tasks", "delete_tasks",
     "upload_csv",
+    "edit_profile",
   ];
 
-  const viewerAllowed = [
+  const brodAllowed = [
     "view_reports",
     "edit_profile",
   ];
 
   if (role === "board_member") return boardMemberAllowed.includes(action);
-  if (role === "viewer") return viewerAllowed.includes(action);
+  if (role === "brod") return brodAllowed.includes(action);
   return false;
 }
 

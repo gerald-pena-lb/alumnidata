@@ -10,10 +10,10 @@ const allLinks = [
   { href: "/events", label: "Events", minRole: "board_member" },
   { href: "/minutes", label: "Minutes", minRole: "board_member" },
   { href: "/finances", label: "Finances", minRole: "board_member" },
-  { href: "/reports", label: "Reports", minRole: "viewer" },
+  { href: "/reports", label: "Reports", minRole: "brod" },
 ];
 
-const roleLevel: Record<string, number> = { viewer: 0, board_member: 1, admin: 2 };
+const roleLevel: Record<string, number> = { brod: 0, board_member: 1, admin: 2 };
 
 export default function Nav() {
   const pathname = usePathname();
@@ -22,7 +22,7 @@ export default function Nav() {
 
   if (pathname === "/login") return null;
 
-  const userLevel = roleLevel[user?.role || "viewer"] ?? 0;
+  const userLevel = roleLevel[user?.role || "brod"] ?? 0;
   const links = allLinks.filter((l) => userLevel >= roleLevel[l.minRole]);
 
   async function handleLogout() {

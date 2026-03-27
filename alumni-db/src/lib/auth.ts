@@ -2,7 +2,7 @@ import crypto from "crypto";
 
 const SECRET = process.env.AUTH_SECRET || "alpha-sigma-alumni-db-secret-key";
 
-export type Role = "admin" | "board_member" | "viewer";
+export type Role = "admin" | "board_member" | "brod";
 
 export function hashPassword(password: string): string {
   const salt = crypto.randomBytes(16).toString("hex");

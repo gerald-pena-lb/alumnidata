@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { generateUsername } from "@/lib/supabase";
 import Papa from "papaparse";
 
 function normalizeHeaders(row: Record<string, string>): Record<string, string> {
@@ -60,6 +61,9 @@ export async function POST(req: NextRequest) {
         title: getField(row, "title", "job_title", "jobtitle", "position") || null,
         industry: getField(row, "industry", "sector", "field") || null,
         status: statusVal === "deceased" ? "deceased" : "alive",
+        username: getField(row, "username") || generateUsername(fullName),
+        password_hash: "masig123",
+        role: "brod",
       });
 
       if (error) errors.push(`Row ${i + 1} (${fullName}): ${error.message}`);

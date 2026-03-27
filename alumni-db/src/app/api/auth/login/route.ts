@@ -18,8 +18,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `DB seed error: ${seedResult.error}` }, { status: 500 });
   }
 
-  const { data: user, error: queryError } = await supabase
-    .from("users")
+  const { data: member, error: queryError } = await supabase
+    .from("members")
     .select("*")
     .eq("username", username)
     .single();
@@ -28,16 +28,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `DB error: ${queryError.message}` }, { status: 500 });
   }
 
-  // Support both plain text passwords and hashed passwords
-  if (!user || user.password_hash !== password) {
+  if (!member || member.password_hash !== password) {
     return NextResponse.json({ error: "Invalid username or password" }, { status: 401 });
   }
 
-  const role = user.role === "admin" ? "admin" : user.role === "board_member" ? "board_member" : "viewer";
-  const token = createSessionToken(user.id, user.username, role);
+  const role = member.role || "brod";
+  const token = createSessionToken(member.id, member.username, role);
   const response = NextResponse.json({
     success: true,
-    user: { id: user.id, username: user.username, name: user.name, role },
+    user: { id: member.id, username: member.username, name: member.full_name, role },
   });
 
   response.cookies.set("session", token, {

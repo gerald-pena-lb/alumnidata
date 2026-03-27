@@ -9,14 +9,12 @@ export async function GET(req: NextRequest) {
   const session = verifySessionToken(token);
   if (!session) return NextResponse.json({ error: "Invalid session" }, { status: 401 });
 
-  const { data: user } = await supabase
-    .from("users")
-    .select("id, username, name, role")
+  const { data: member } = await supabase
+    .from("members")
+    .select("id, username, full_name, role, chapter, batch_name, batch_letter, year, phone_number, current_company, title, industry")
     .eq("id", session.userId)
     .single();
 
-  if (!user) return NextResponse.json({ error: "User not found" }, { status: 401 });
-
-  const role = user.role === "admin" ? "admin" : user.role === "board_member" ? "board_member" : "viewer";
-  return NextResponse.json({ id: user.id, username: user.username, name: user.name, role });
+  if (!member) return NextResponse.json({ error: "User not found" }, { status: 401 });
+  return NextResponse.json({ ...member, name: member.full_name, role: member.role || "brod" });
 }
