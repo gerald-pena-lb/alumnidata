@@ -8,13 +8,28 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Username and password required" }, { status: 400 });
   }
 
-  await ensureAdminUsers();
+  // Check if Supabase is configured
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!supabaseUrl) {
+    return NextResponse.json({ error: "SUPABASE_URL not configured in environment variables" }, { status: 503 });
+  }
 
-  const { data: user } = await supabase
+  // Seed admin users if table is empty
+  const seedResult = await ensureAdminUsers();
+  if (seedResult?.error) {
+    return NextResponse.json({ error: `DB seed error: ${seedResult.error}` }, { status: 500 });
+  }
+
+  // Find user
+  const { data: user, error: queryError } = await supabase
     .from("app_users")
     .select("*")
     .eq("username", username)
     .single();
+
+  if (queryError) {
+    return NextResponse.json({ error: `DB error: ${queryError.message}` }, { status: 500 });
+  }
 
   if (!user || user.password !== password) {
     return NextResponse.json({ error: "Invalid username or password" }, { status: 401 });
