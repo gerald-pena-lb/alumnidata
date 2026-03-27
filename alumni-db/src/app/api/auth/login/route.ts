@@ -8,21 +8,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Username and password required" }, { status: 400 });
   }
 
-  // Check if Supabase is configured
   const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
   if (!supabaseUrl) {
-    return NextResponse.json({ error: "SUPABASE_URL not configured in environment variables" }, { status: 503 });
+    return NextResponse.json({ error: "SUPABASE_URL not configured" }, { status: 503 });
   }
 
-  // Seed admin users if table is empty
   const seedResult = await ensureAdminUsers();
   if (seedResult?.error) {
     return NextResponse.json({ error: `DB seed error: ${seedResult.error}` }, { status: 500 });
   }
 
-  // Find user
   const { data: user, error: queryError } = await supabase
-    .from("app_users")
+    .from("users")
     .select("*")
     .eq("username", username)
     .single();
@@ -31,7 +28,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `DB error: ${queryError.message}` }, { status: 500 });
   }
 
-  if (!user || user.password !== password) {
+  // Support both plain text passwords and hashed passwords
+  if (!user || user.password_hash !== password) {
     return NextResponse.json({ error: "Invalid username or password" }, { status: 401 });
   }
 
@@ -39,7 +37,7 @@ export async function POST(req: NextRequest) {
   const token = createSessionToken(user.id, user.username, role);
   const response = NextResponse.json({
     success: true,
-    user: { id: user.id, username: user.username, name: user.display_name, role },
+    user: { id: user.id, username: user.username, name: user.name, role },
   });
 
   response.cookies.set("session", token, {

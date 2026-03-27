@@ -10,13 +10,13 @@ export async function GET(req: NextRequest) {
   if (!session) return NextResponse.json({ error: "Invalid session" }, { status: 401 });
 
   const { data: user } = await supabase
-    .from("app_users")
-    .select("id, username, display_name, role")
+    .from("users")
+    .select("id, username, name, role")
     .eq("id", session.userId)
     .single();
 
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 401 });
 
   const role = user.role === "admin" ? "admin" : user.role === "board_member" ? "board_member" : "viewer";
-  return NextResponse.json({ id: user.id, username: user.username, name: user.display_name, role });
+  return NextResponse.json({ id: user.id, username: user.username, name: user.name, role });
 }
