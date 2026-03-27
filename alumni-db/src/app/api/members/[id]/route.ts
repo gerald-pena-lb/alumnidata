@@ -29,12 +29,13 @@ export async function PUT(
 
   db.prepare(`
     UPDATE members SET
-      full_name = ?, batch_name = ?, batch_letter = ?, year = ?,
+      full_name = ?, chapter = ?, batch_name = ?, batch_letter = ?, year = ?,
       phone_number = ?, current_company = ?, title = ?, industry = ?,
       status = ?, updated_at = datetime('now')
     WHERE id = ?
   `).run(
     body.full_name,
+    body.chapter || null,
     body.batch_name || null,
     body.batch_letter || null,
     body.year || null,

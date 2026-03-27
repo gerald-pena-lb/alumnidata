@@ -7,6 +7,7 @@ import { INDUSTRIES } from "@/lib/industries";
 interface Member {
   id: number;
   full_name: string;
+  chapter: string;
   batch_name: string;
   batch_letter: string;
   year: number;
@@ -24,6 +25,7 @@ export default function BrodsPage() {
   const [batch, setBatch] = useState("");
   const [year, setYear] = useState("");
   const [titleFilter, setTitleFilter] = useState("");
+  const [chapterFilter, setChapterFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [uploading, setUploading] = useState(false);
   const [uploadMsg, setUploadMsg] = useState("");
@@ -35,10 +37,11 @@ export default function BrodsPage() {
     if (batch) params.set("batch", batch);
     if (year) params.set("year", year);
     if (titleFilter) params.set("title", titleFilter);
+    if (chapterFilter) params.set("chapter", chapterFilter);
     if (statusFilter) params.set("status", statusFilter);
     const res = await fetch(`/api/members?${params}`);
     setMembers(await res.json());
-  }, [search, industry, batch, year, titleFilter, statusFilter]);
+  }, [search, industry, batch, year, titleFilter, chapterFilter, statusFilter]);
 
   useEffect(() => {
     const t = setTimeout(load, 300);
@@ -96,7 +99,7 @@ export default function BrodsPage() {
 
       {/* Search and Filters */}
       <div className="bg-white rounded-lg shadow p-4 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-7 gap-3">
           <input
             type="text"
             placeholder="Search name..."
@@ -138,6 +141,16 @@ export default function BrodsPage() {
             className="border border-gray-300 rounded-md px-3 py-2 text-sm"
           />
           <select
+            value={chapterFilter}
+            onChange={(e) => setChapterFilter(e.target.value)}
+            className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+          >
+            <option value="">All Chapters</option>
+            <option value="Diliman">Diliman</option>
+            <option value="Los Banos">Los Banos</option>
+            <option value="Manila">Manila</option>
+          </select>
+          <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             className="border border-gray-300 rounded-md px-3 py-2 text-sm"
@@ -155,6 +168,7 @@ export default function BrodsPage() {
           <thead className="bg-gray-50">
             <tr>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Chapter</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Batch</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Year</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Company</th>
@@ -171,6 +185,7 @@ export default function BrodsPage() {
                     {m.full_name}
                   </Link>
                 </td>
+                <td className="px-4 py-3 text-sm text-gray-600">{m.chapter}</td>
                 <td className="px-4 py-3 text-sm text-gray-600">
                   {m.batch_name} {m.batch_letter && `(${m.batch_letter})`}
                 </td>
@@ -193,7 +208,7 @@ export default function BrodsPage() {
             ))}
             {members.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-gray-500 text-sm">
+                <td colSpan={8} className="px-4 py-8 text-center text-gray-500 text-sm">
                   No members found. Add your first brod or upload a CSV.
                 </td>
               </tr>

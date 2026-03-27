@@ -49,8 +49,8 @@ export async function POST(req: NextRequest) {
 
     db = getDb();
     const stmt = db.prepare(`
-      INSERT INTO members (full_name, batch_name, batch_letter, year, phone_number, current_company, title, industry, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO members (full_name, chapter, batch_name, batch_letter, year, phone_number, current_company, title, industry, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     let count = 0;
@@ -68,13 +68,17 @@ export async function POST(req: NextRequest) {
 
         const yearVal = getField(row, "year", "batch_year", "grad_year");
         const yearNum = yearVal ? Number(yearVal) : null;
+        const chapterVal = getField(row, "chapter");
+        const chapterMap: Record<string, string> = { diliman: "Diliman", "los_banos": "Los Banos", "los banos": "Los Banos", lb: "Los Banos", manila: "Manila" };
+        const chapter = chapterVal ? (chapterMap[chapterVal.toLowerCase()] || chapterVal) : null;
         const statusVal = getField(row, "status").toLowerCase();
         const status = statusVal === "deceased" ? "deceased" : "alive";
 
         try {
           stmt.run(
             fullName,
-            getField(row, "batch_name", "batchname", "batch", "chapter") || null,
+            chapter,
+            getField(row, "batch_name", "batchname", "batch") || null,
             getField(row, "batch_letter", "batchletter", "letter") || null,
             yearNum && !isNaN(yearNum) ? yearNum : null,
             getField(row, "phone_number", "phonenumber", "phone", "contact", "mobile", "cell") || null,

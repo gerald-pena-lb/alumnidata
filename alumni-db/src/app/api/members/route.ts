@@ -10,6 +10,7 @@ export async function GET(req: NextRequest) {
   const year = url.searchParams.get("year") || "";
   const titleFilter = url.searchParams.get("title") || "";
   const status = url.searchParams.get("status") || "";
+  const chapter = url.searchParams.get("chapter") || "";
 
   let query = "SELECT * FROM members WHERE 1=1";
   const params: unknown[] = [];
@@ -38,6 +39,10 @@ export async function GET(req: NextRequest) {
     query += " AND status = ?";
     params.push(status);
   }
+  if (chapter) {
+    query += " AND chapter = ?";
+    params.push(chapter);
+  }
 
   query += " ORDER BY full_name ASC";
   const members = db.prepare(query).all(...params);
@@ -52,13 +57,14 @@ export async function POST(req: NextRequest) {
   // Support batch insert
   if (Array.isArray(body)) {
     const stmt = db.prepare(`
-      INSERT INTO members (full_name, batch_name, batch_letter, year, phone_number, current_company, title, industry, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO members (full_name, chapter, batch_name, batch_letter, year, phone_number, current_company, title, industry, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     const insertMany = db.transaction((members: typeof body) => {
       for (const m of members) {
         stmt.run(
           m.full_name,
+          m.chapter || null,
           m.batch_name || null,
           m.batch_letter || null,
           m.year || null,
@@ -80,6 +86,7 @@ export async function POST(req: NextRequest) {
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     body.full_name,
+    body.chapter || null,
     body.batch_name || null,
     body.batch_letter || null,
     body.year || null,

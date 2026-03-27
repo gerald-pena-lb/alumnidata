@@ -22,6 +22,7 @@ function getDb() {
     CREATE TABLE IF NOT EXISTS members (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       full_name TEXT NOT NULL,
+      chapter TEXT CHECK(chapter IN ('Diliman', 'Los Banos', 'Manila')),
       batch_name TEXT,
       batch_letter TEXT,
       year INTEGER,
