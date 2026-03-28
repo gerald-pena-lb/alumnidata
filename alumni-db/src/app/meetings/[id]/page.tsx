@@ -78,6 +78,7 @@ export default function MeetingDetailPage({ params }: { params: Promise<{ id: st
   const [summarizingIdx, setSummarizingIdx] = useState<number | null>(null);
   const [editingNoteIdx, setEditingNoteIdx] = useState<number | null>(null);
   const [noteDraft, setNoteDraft] = useState("");
+  const [creatingTasks, setCreatingTasks] = useState(false);
 
   useEffect(() => {
     if (summarizing) {
@@ -590,16 +591,85 @@ export default function MeetingDetailPage({ params }: { params: Promise<{ id: st
       {/* Action Items */}
       {hasMinutes && data.action_items?.length > 0 && (
         <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <h2 className="text-sm font-semibold text-gray-900 mb-3">Action Items</h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-gray-900">Action Items</h2>
+            <button
+              disabled={creatingTasks}
+              onClick={async () => {
+                setCreatingTasks(true);
+                try {
+                  // Create a project for this meeting's action items
+                  const projRes = await fetch("/api/events", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      name: `Action Items: ${data.title || "Meeting"}`,
+                      description: `Action items from meeting on ${data.meeting_date || "N/A"}`,
+                      date: data.meeting_date || new Date().toISOString().slice(0, 10),
+                      type: "project",
+                      status: "ongoing",
+                    }),
+                  });
+                  const { id: projectId } = await projRes.json();
+
+                  // Create a task for each action item
+                  let created = 0;
+                  for (const item of data.action_items) {
+                    const res = await fetch(`/api/events/${projectId}/tasks`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        title: item.task,
+                        assignee: item.assigned_to || null,
+                        due_date: item.deadline || null,
+                        section: "Action Items",
+                        priority: "high",
+                        status: "todo",
+                      }),
+                    });
+                    if (res.ok) created++;
+                  }
+                  alert(`Created project with ${created} task(s). Check the Projects page.`);
+                } catch {
+                  alert("Failed to create tasks");
+                }
+                setCreatingTasks(false);
+              }}
+              className="text-xs text-[#1a3a7a] hover:underline disabled:opacity-50 print:hidden"
+            >
+              {creatingTasks ? "Creating..." : "Create Tasks from Action Items"}
+            </button>
+          </div>
           <div className="space-y-2">
             {data.action_items.map((a, i) => (
               <div key={i} className="bg-amber-50 rounded-md p-3 flex items-start gap-3">
                 <span className="w-6 h-6 rounded-full bg-[#c9a227] text-white text-xs flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</span>
                 <div className="flex-1">
                   <span className="font-medium text-sm text-gray-900">{a.task}</span>
-                  <div className="flex items-center gap-2 mt-1">
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
                     <span className="text-xs border border-gray-300 rounded-full px-2 py-0.5 text-gray-600">{a.assigned_to}</span>
-                    {a.deadline && <span className="text-xs text-gray-400">{a.deadline}</span>}
+                    {a.deadline ? (
+                      <span className="text-xs bg-amber-100 text-amber-700 rounded px-2 py-0.5">Due: {a.deadline}</span>
+                    ) : (
+                      <button
+                        className="text-xs text-gray-400 hover:text-[#1a3a7a] hover:underline print:hidden"
+                        onClick={async () => {
+                          const deadline = prompt("Set due date (YYYY-MM-DD):", new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10));
+                          if (deadline) {
+                            const updated = [...data.action_items];
+                            updated[i] = { ...updated[i], deadline };
+                            await fetch(`/api/minutes/${id}`, {
+                              method: "PUT",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ action_items: updated }),
+                            });
+                            load();
+                          }
+                        }}
+                      >
+                        + Set due date
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
