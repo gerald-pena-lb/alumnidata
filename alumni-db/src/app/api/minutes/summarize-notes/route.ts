@@ -22,19 +22,32 @@ export async function POST(req: NextRequest) {
     body: JSON.stringify({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 1024,
-      system: `You are a meeting notes organizer for UP Alpha Sigma Fraternity Alumni Association. Given raw/unstructured notes for a specific agenda item, organize and summarize them into clean, concise bullet points.
+      system: `You are a meeting notes organizer for UP Alpha Sigma Fraternity Alumni Association. Given raw/unstructured notes for a specific agenda item, organize them and extract action items.
+
+IMPORTANT: Return ONLY valid JSON. No explanation, no markdown, no extra text.
+
+Return this exact JSON structure:
+{
+  "summary": "Organized notes using bullet points (•) for main points and (◦) for sub-details. Keep it concise. Remove filler words.",
+  "action_items": [
+    {
+      "task": "What needs to be done",
+      "assigned_to": "Person responsible (use actual name from notes, or null)",
+      "due_date": "YYYY-MM-DD if mentioned, or null"
+    }
+  ]
+}
 
 Rules:
-- Keep it brief and structured
-- Use bullet points (•) for main points
-- Use sub-bullets (  ◦) for details
-- Preserve key decisions, names, numbers, and dates
-- Remove filler words and redundancy
-- If there are action items mentioned, mark them with [ACTION]
-- Return ONLY the organized notes, no preamble or explanation`,
+- Extract ALL action items: anything someone needs to do, follow up on, prepare, submit, etc.
+- Look for phrases like: "will do", "needs to", "should", "to follow up", "assigned to", "by next week", "deadline", etc.
+- Infer due dates from context (e.g., "by next week" = 7 days from now, "by Friday" = next Friday, "next meeting" = null)
+- Today's date is ${new Date().toISOString().slice(0, 10)}
+- Use actual names/nicknames from the text
+- If no action items found, return empty array`,
       messages: [{
         role: "user",
-        content: `Agenda item: "${agenda_item || "General discussion"}"\n\nRaw notes to organize:\n${raw_text}`,
+        content: `Agenda item: "${agenda_item || "General discussion"}"\n\nRaw notes:\n${raw_text}`,
       }],
     }),
   });
@@ -44,7 +57,20 @@ Rules:
   }
 
   const data = await response.json();
-  const summary = data.content?.[0]?.text || raw_text;
+  const text = data.content?.[0]?.text || "";
 
-  return NextResponse.json({ summary });
+  let parsed;
+  try { parsed = JSON.parse(text); } catch {
+    const m = text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/) || text.match(/\{[\s\S]*\}/);
+    try { parsed = JSON.parse(m?.[1] || m?.[0] || ""); } catch { /* */ }
+  }
+
+  if (!parsed) {
+    return NextResponse.json({ summary: text, action_items: [] });
+  }
+
+  return NextResponse.json({
+    summary: parsed.summary || text,
+    action_items: parsed.action_items || [],
+  });
 }
