@@ -73,6 +73,9 @@ export default function MeetingDetailPage({ params }: { params: Promise<{ id: st
   const [prevItems, setPrevItems] = useState<PrevActionItem[]>([]);
   const [agenda, setAgenda] = useState<AgendaItem[]>([]);
   const [boardMembers, setBoardMembers] = useState<BoardMember[]>([]);
+  const [summarizingIdx, setSummarizingIdx] = useState<number | null>(null);
+  const [editingNoteIdx, setEditingNoteIdx] = useState<number | null>(null);
+  const [noteDraft, setNoteDraft] = useState("");
 
   useEffect(() => {
     if (summarizing) {
@@ -96,6 +99,37 @@ export default function MeetingDetailPage({ params }: { params: Promise<{ id: st
     setActionItems(d.action_items || []);
     setPrevItems(d.previous_action_items || []);
     setAgenda(d.agenda || []);
+  }
+
+  async function summarizeNotes(idx: number, rawText: string, agendaItem: string, target: "edit" | "view") {
+    setSummarizingIdx(idx);
+    try {
+      const res = await fetch("/api/minutes/summarize-notes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ raw_text: rawText, agenda_item: agendaItem }),
+      });
+      if (!res.ok) throw new Error("Summarization failed");
+      const { summary } = await res.json();
+      if (target === "edit") {
+        const arr = [...agenda]; arr[idx] = { ...arr[idx], notes: summary }; setAgenda(arr);
+      } else {
+        // Save directly to DB in view mode
+        const updated = [...(data?.agenda || [])];
+        updated[idx] = { ...updated[idx], notes: summary };
+        await fetch(`/api/minutes/${id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ agenda: updated }),
+        });
+        setEditingNoteIdx(null);
+        setNoteDraft("");
+        load();
+      }
+    } catch {
+      alert("Failed to summarize notes");
+    }
+    setSummarizingIdx(null);
   }
 
   useEffect(() => {
@@ -294,7 +328,14 @@ export default function MeetingDetailPage({ params }: { params: Promise<{ id: st
                   </select>
                   <button onClick={() => setAgenda(agenda.filter((_, j) => j !== i))} className="text-red-400 hover:text-red-600">&times;</button>
                 </div>
-                <textarea placeholder="Notes (optional)" rows={2} value={a.notes || ""} onChange={(e) => { const arr = [...agenda]; arr[i] = { ...arr[i], notes: e.target.value || null }; setAgenda(arr); }} className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm ml-8" style={{ width: "calc(100% - 2rem)" }} />
+                <div className="ml-8" style={{ width: "calc(100% - 2rem)" }}>
+                  <textarea placeholder="Paste raw notes here — then click Summarize, or type organized notes directly" rows={3} value={a.notes || ""} onChange={(e) => { const arr = [...agenda]; arr[i] = { ...arr[i], notes: e.target.value || null }; setAgenda(arr); }} className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm" />
+                  {a.notes && a.notes.trim().length > 20 && (
+                    <button type="button" disabled={summarizingIdx === i} onClick={() => summarizeNotes(i, a.notes || "", a.item, "edit")} className="mt-1 text-xs text-[#1a3a7a] hover:underline disabled:opacity-50">
+                      {summarizingIdx === i ? "Summarizing..." : "✨ Summarize with AI"}
+                    </button>
+                  )}
+                </div>
               </div>
             ))
           ) : (
@@ -329,7 +370,38 @@ export default function MeetingDetailPage({ params }: { params: Promise<{ id: st
                       {a.done && <span className="ml-2 text-xs bg-green-100 text-green-700 rounded-full px-2 py-0.5">Done</span>}
                     </div>
                   </div>
-                  {a.notes && <div className="ml-9 mt-1 text-xs text-gray-500 bg-gray-50 rounded px-3 py-2 whitespace-pre-wrap">{a.notes}</div>}
+                  {/* Notes display / inline edit */}
+                  {editingNoteIdx === i ? (
+                    <div className="ml-9 mt-2">
+                      <textarea rows={4} value={noteDraft} onChange={(e) => setNoteDraft(e.target.value)} placeholder="Paste raw notes here..." className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm" />
+                      <div className="flex gap-2 mt-1">
+                        <button onClick={async () => {
+                          const updated = [...(data.agenda || [])];
+                          updated[i] = { ...updated[i], notes: noteDraft || null };
+                          await fetch(`/api/minutes/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ agenda: updated }) });
+                          setEditingNoteIdx(null); setNoteDraft(""); load();
+                        }} className="text-xs text-green-600 hover:underline">Save</button>
+                        {noteDraft.trim().length > 20 && (
+                          <button disabled={summarizingIdx === i} onClick={() => summarizeNotes(i, noteDraft, a.item, "view")} className="text-xs text-[#1a3a7a] hover:underline disabled:opacity-50">
+                            {summarizingIdx === i ? "Summarizing..." : "✨ Summarize & Save"}
+                          </button>
+                        )}
+                        <button onClick={() => { setEditingNoteIdx(null); setNoteDraft(""); }} className="text-xs text-gray-400 hover:underline">Cancel</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="ml-9 mt-1">
+                      {a.notes ? (
+                        <div onClick={() => { setEditingNoteIdx(i); setNoteDraft(a.notes || ""); }} className="text-xs text-gray-500 bg-gray-50 rounded px-3 py-2 whitespace-pre-wrap cursor-pointer hover:bg-gray-100 transition-colors" title="Click to edit notes">
+                          {a.notes}
+                        </div>
+                      ) : (
+                        <button onClick={() => { setEditingNoteIdx(i); setNoteDraft(""); }} className="text-xs text-gray-400 hover:text-[#1a3a7a] hover:underline">
+                          + Add notes
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
