@@ -3,6 +3,8 @@
 import { useEffect, useState, use, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import PrintButton from "@/components/PrintButton";
+import PrintHeader from "@/components/PrintHeader";
 
 interface Participant { name: string; role: string | null; }
 interface Update { topic: string; details: string; by: string | null; }
@@ -217,7 +219,8 @@ export default function MeetingDetailPage({ params }: { params: Promise<{ id: st
 
   return (
     <div className="max-w-4xl mx-auto">
-      <Link href="/meetings" className="text-sm text-[#1a3a7a] hover:underline mb-4 inline-block">&larr; All Meetings</Link>
+      <PrintHeader title="Meeting" subtitle={data.title || "Untitled Meeting"} />
+      <Link href="/meetings" className="text-sm text-[#1a3a7a] hover:underline mb-4 inline-block print:hidden">&larr; All Meetings</Link>
 
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
@@ -225,6 +228,7 @@ export default function MeetingDetailPage({ params }: { params: Promise<{ id: st
         <div className="flex gap-2 flex-shrink-0 ml-4">
           {!editing && (
             <>
+              <PrintButton label="Save PDF" />
               <button onClick={() => setEditing(true)} className="px-3 py-1.5 bg-white border border-gray-300 rounded-md text-sm hover:bg-gray-50">Edit</button>
               <button onClick={() => setConfirmDelete(true)} className="px-3 py-1.5 bg-red-600 text-white rounded-md text-sm hover:bg-red-700">Delete</button>
               {hasMinutes && <button onClick={() => setShowRaw(!showRaw)} className="px-3 py-1.5 bg-white border border-gray-300 rounded-md text-sm hover:bg-gray-50">{showRaw ? "Hide Raw" : "Show Raw"}</button>}

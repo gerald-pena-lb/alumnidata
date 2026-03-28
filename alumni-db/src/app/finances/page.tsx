@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import PrintButton from "@/components/PrintButton";
+import PrintHeader from "@/components/PrintHeader";
 
 interface DuesEntry {
   id: number;
@@ -87,7 +89,11 @@ export default function FinancesPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Finances</h1>
+      <PrintHeader title="Financial Records" />
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Finances</h1>
+        <PrintButton label="Save PDF" />
+      </div>
 
       <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-lg w-fit">
         {tabs.map((t) => (

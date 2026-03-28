@@ -4,6 +4,8 @@ import { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { INDUSTRIES } from "@/lib/industries";
 import { useAuth } from "@/components/AuthProvider";
+import PrintButton from "@/components/PrintButton";
+import PrintHeader from "@/components/PrintHeader";
 
 interface Member {
   id: number;
@@ -132,6 +134,7 @@ export default function BrodDetailPage({ params }: { params: Promise<{ id: strin
 
   return (
     <div className="max-w-4xl mx-auto">
+      <PrintHeader title="Member Profile" subtitle={`${member.last_name}, ${member.first_name}`} />
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{member.last_name}, {member.first_name}</h1>
@@ -144,6 +147,7 @@ export default function BrodDetailPage({ params }: { params: Promise<{ id: strin
           </span>
         </div>
         <div className="flex gap-2">
+          <PrintButton label="Save PDF" />
           <button
             onClick={() => setEditing(!editing)}
             className="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm hover:bg-gray-50"

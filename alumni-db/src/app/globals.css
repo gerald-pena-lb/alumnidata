@@ -1,1 +1,75 @@
 @import "tailwindcss";
+
+@media print {
+  /* Hide nav, chatbox, buttons, and non-content elements */
+  nav,
+  .print\:hidden,
+  button:not(.print\:visible),
+  [class*="fixed"] {
+    display: none !important;
+  }
+
+  /* Reset page layout */
+  body {
+    background: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  main {
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Ensure cards and shadows print cleanly */
+  .shadow, .shadow-lg, .shadow-md, .shadow-2xl {
+    box-shadow: none !important;
+    border: 1px solid #e5e7eb !important;
+  }
+
+  /* Page breaks */
+  .print-break-before {
+    page-break-before: always;
+  }
+
+  .print-break-inside-avoid {
+    page-break-inside: avoid;
+  }
+
+  /* Keep colors for badges */
+  [class*="bg-green"], [class*="bg-blue"], [class*="bg-yellow"],
+  [class*="bg-red"], [class*="bg-amber"], [class*="bg-gray"] {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Table readability */
+  table {
+    font-size: 11px !important;
+  }
+
+  /* Print header */
+  .print-header {
+    display: block !important;
+    text-align: center;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #1a3a7a;
+  }
+
+  .print-header h1 {
+    font-size: 18px;
+    color: #1a3a7a;
+  }
+
+  .print-header p {
+    font-size: 12px;
+    color: #666;
+  }
+}
+
+/* Hidden by default, shown in print */
+.print-header {
+  display: none;
+}

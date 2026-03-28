@@ -2,6 +2,8 @@
 
 import { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
+import PrintButton from "@/components/PrintButton";
+import PrintHeader from "@/components/PrintHeader";
 
 interface Task {
   id: number;
@@ -181,12 +183,14 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
 
   return (
     <div className="max-w-6xl mx-auto">
+      <PrintHeader title={event.type === "project" ? "Project" : "Event"} subtitle={event.name} />
       <div className="flex items-center justify-between mb-6">
         <div>
           <div className="text-xs font-medium text-gray-500 uppercase mb-1">{event.type}</div>
           <h1 className="text-2xl font-bold text-gray-900">{event.name}</h1>
         </div>
         <div className="flex gap-2">
+          <PrintButton label="Save PDF" />
           <button onClick={() => setEditing(!editing)} className="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm hover:bg-gray-50">
             {editing ? "Cancel" : "Edit"}
           </button>

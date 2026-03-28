@@ -3,6 +3,8 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { INDUSTRIES } from "@/lib/industries";
+import PrintButton from "@/components/PrintButton";
+import PrintHeader from "@/components/PrintHeader";
 
 interface Member {
   id: number;
@@ -71,9 +73,11 @@ export default function BrodsPage() {
 
   return (
     <div>
+      <PrintHeader title="Members Directory" />
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Brods</h1>
         <div className="flex gap-2">
+          <PrintButton label="Save PDF" />
           <label className="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm cursor-pointer hover:bg-gray-50">
             {uploading ? "Uploading..." : "Upload CSV"}
             <input

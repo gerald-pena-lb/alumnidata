@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import PrintButton from "@/components/PrintButton";
+import PrintHeader from "@/components/PrintHeader";
 
 interface FinancialReport {
   summary: {
@@ -70,7 +72,11 @@ export default function ReportsPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Reports</h1>
+      <PrintHeader title="Reports" />
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Reports</h1>
+        <PrintButton label="Save PDF" />
+      </div>
 
       <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-lg w-fit">
         <button
