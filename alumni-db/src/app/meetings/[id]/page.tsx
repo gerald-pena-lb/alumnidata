@@ -10,7 +10,7 @@ interface Participant { name: string; role: string | null; }
 interface Update { topic: string; details: string; by: string | null; }
 interface ActionItem { task: string; assigned_to: string; deadline: string | null; }
 interface PrevActionItem { task: string; assigned_to: string; status: "done" | "pending"; remarks: string | null; }
-interface AgendaItem { item: string; assigned_to: string | null; notes: string | null; }
+interface AgendaItem { item: string; assigned_to: string | null; notes: string | null; done?: boolean; }
 
 interface Meeting {
   id: number;
@@ -283,7 +283,10 @@ export default function MeetingDetailPage({ params }: { params: Promise<{ id: st
             agenda.map((a, i) => (
               <div key={i} className="border border-gray-200 rounded-md p-3 mb-2">
                 <div className="flex gap-2 items-center mb-2">
-                  <span className="w-6 h-6 rounded-full bg-[#c9a227] text-white text-xs flex items-center justify-center flex-shrink-0">{i + 1}</span>
+                  <button type="button" onClick={() => { const arr = [...agenda]; arr[i] = { ...arr[i], done: !arr[i].done }; setAgenda(arr); }}
+                    className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${a.done ? "bg-green-500 border-green-500 text-white" : "border-[#c9a227]"}`}>
+                    {a.done ? <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg> : <span className="text-[#c9a227] text-xs font-bold">{i + 1}</span>}
+                  </button>
                   <input type="text" placeholder="Agenda item" value={a.item} onChange={(e) => { const arr = [...agenda]; arr[i] = { ...arr[i], item: e.target.value }; setAgenda(arr); }} className="flex-1 border border-gray-300 rounded-md px-3 py-1.5 text-sm" />
                   <select value={a.assigned_to || ""} onChange={(e) => { const arr = [...agenda]; arr[i] = { ...arr[i], assigned_to: e.target.value || null }; setAgenda(arr); }} className="w-full sm:w-40 border border-gray-300 rounded-md px-3 py-1.5 text-sm">
                     <option value="">Assigned to</option>
@@ -297,12 +300,33 @@ export default function MeetingDetailPage({ params }: { params: Promise<{ id: st
           ) : (
             <div className="space-y-2">
               {data.agenda?.map((a, i) => (
-                <div key={i} className="p-2">
+                <div key={i} className={`p-2 rounded-md ${a.done ? "bg-green-50/50" : ""}`}>
                   <div className="flex items-start gap-3">
-                    <span className="w-6 h-6 rounded-full bg-[#c9a227] text-white text-xs flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</span>
+                    <button
+                      onClick={async () => {
+                        const updated = [...(data.agenda || [])];
+                        updated[i] = { ...updated[i], done: !updated[i].done };
+                        await fetch(`/api/minutes/${id}`, {
+                          method: "PUT",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ agenda: updated }),
+                        });
+                        load();
+                      }}
+                      className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors ${
+                        a.done ? "bg-green-500 border-green-500 text-white" : "border-[#c9a227] hover:bg-[#c9a227]/10"
+                      }`}
+                    >
+                      {a.done ? (
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                      ) : (
+                        <span className="text-[#c9a227] text-xs font-bold">{i + 1}</span>
+                      )}
+                    </button>
                     <div className="flex-1">
-                      <span className="text-sm text-gray-900">{a.item}</span>
+                      <span className={`text-sm ${a.done ? "line-through text-gray-400" : "text-gray-900"}`}>{a.item}</span>
                       {a.assigned_to && <span className="ml-2 text-xs bg-blue-50 text-blue-700 rounded-full px-2 py-0.5">{a.assigned_to}</span>}
+                      {a.done && <span className="ml-2 text-xs bg-green-100 text-green-700 rounded-full px-2 py-0.5">Done</span>}
                     </div>
                   </div>
                   {a.notes && <div className="ml-9 mt-1 text-xs text-gray-500 bg-gray-50 rounded px-3 py-2 whitespace-pre-wrap">{a.notes}</div>}
