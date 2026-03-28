@@ -73,6 +73,8 @@ export default function MeetingDetailPage({ params }: { params: Promise<{ id: st
   const [prevItems, setPrevItems] = useState<PrevActionItem[]>([]);
   const [agenda, setAgenda] = useState<AgendaItem[]>([]);
   const [boardMembers, setBoardMembers] = useState<BoardMember[]>([]);
+  const [allMembers, setAllMembers] = useState<{ id: number; first_name: string; last_name: string; full_name: string; chapter: string }[]>([]);
+  const [showAttendance, setShowAttendance] = useState(false);
   const [summarizingIdx, setSummarizingIdx] = useState<number | null>(null);
   const [editingNoteIdx, setEditingNoteIdx] = useState<number | null>(null);
   const [noteDraft, setNoteDraft] = useState("");
@@ -135,6 +137,7 @@ export default function MeetingDetailPage({ params }: { params: Promise<{ id: st
   useEffect(() => {
     load();
     fetch("/api/members?role=board_and_admin").then((r) => r.json()).then(setBoardMembers);
+    fetch("/api/members?status=alive").then((r) => r.json()).then(setAllMembers);
   }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleDelete() {
@@ -303,6 +306,68 @@ export default function MeetingDetailPage({ params }: { params: Promise<{ id: st
             {data.meeting_date && <div><span className="text-gray-500">Date:</span> <span className="font-medium">{formatDateLong(data.meeting_date)}</span></div>}
             {data.location && <div><span className="text-gray-500">Location:</span> <span className="font-medium">{data.location}</span></div>}
           </div>
+        )}
+      </div>
+
+      {/* Attendance */}
+      <div className="bg-white rounded-lg shadow p-6 mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold text-gray-900">
+            Attendance ({data.participants?.length || 0} present)
+          </h2>
+          <button onClick={() => setShowAttendance(!showAttendance)} className="text-xs text-[#1a3a7a] hover:underline print:hidden">
+            {showAttendance ? "Close" : "Mark Attendance"}
+          </button>
+        </div>
+
+        {showAttendance && (
+          <div className="mb-4 border border-gray-200 rounded-md p-3 print:hidden">
+            <p className="text-xs text-gray-500 mb-2">Click to toggle attendance:</p>
+            <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto">
+              {allMembers.map((m) => {
+                const isPresent = data.participants?.some((p) => p.name === m.full_name);
+                return (
+                  <button
+                    key={m.id}
+                    onClick={async () => {
+                      let updated;
+                      if (isPresent) {
+                        updated = (data.participants || []).filter((p) => p.name !== m.full_name);
+                      } else {
+                        updated = [...(data.participants || []), { name: m.full_name, role: null }];
+                      }
+                      await fetch(`/api/minutes/${id}`, {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ participants: updated }),
+                      });
+                      load();
+                    }}
+                    className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                      isPresent
+                        ? "bg-green-100 text-green-800 border border-green-300"
+                        : "bg-gray-100 text-gray-500 border border-gray-200 hover:bg-gray-200"
+                    }`}
+                  >
+                    {isPresent && "✓ "}{m.first_name} {m.last_name}{m.chapter ? ` (${m.chapter})` : ""}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {data.participants && data.participants.length > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            {data.participants.map((p, i) => (
+              <span key={i} className="bg-blue-50 rounded-full px-3 py-1 text-sm">
+                <span className="font-medium">{p.name}</span>
+                {p.role && <span className="text-gray-500 ml-1">({p.role})</span>}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <p className="text-gray-400 text-xs">No attendance recorded yet</p>
         )}
       </div>
 
