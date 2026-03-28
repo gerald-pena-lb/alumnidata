@@ -10,7 +10,7 @@ interface Participant { name: string; role: string | null; }
 interface Update { topic: string; details: string; by: string | null; }
 interface ActionItem { task: string; assigned_to: string; deadline: string | null; }
 interface PrevActionItem { task: string; assigned_to: string; status: "done" | "pending"; remarks: string | null; }
-interface AgendaItem { item: string; assigned_to: string | null; }
+interface AgendaItem { item: string; assigned_to: string | null; notes: string | null; }
 
 interface Meeting {
   id: number;
@@ -175,6 +175,7 @@ export default function MeetingDetailPage({ params }: { params: Promise<{ id: st
     const itemsToAdd: AgendaItem[] = actionItems.map((a) => ({
       item: `[Action Item] ${a.task}${a.deadline ? ` (due: ${a.deadline})` : ""}`,
       assigned_to: a.assigned_to || null,
+      notes: null,
     }));
 
     if (selectedNextMeeting === "new") {
@@ -276,29 +277,35 @@ export default function MeetingDetailPage({ params }: { params: Promise<{ id: st
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-gray-900">Agenda</h2>
-            {editing && <button onClick={() => setAgenda([...agenda, { item: "", assigned_to: null }])} className="text-xs text-[#1a3a7a] hover:underline">+ Add</button>}
+            {editing && <button onClick={() => setAgenda([...agenda, { item: "", assigned_to: null, notes: null }])} className="text-xs text-[#1a3a7a] hover:underline">+ Add</button>}
           </div>
           {editing ? (
             agenda.map((a, i) => (
-              <div key={i} className="flex gap-2 mb-2 items-center">
-                <span className="w-6 h-6 rounded-full bg-[#c9a227] text-white text-xs flex items-center justify-center flex-shrink-0">{i + 1}</span>
-                <input type="text" placeholder="Agenda item" value={a.item} onChange={(e) => { const arr = [...agenda]; arr[i] = { ...arr[i], item: e.target.value }; setAgenda(arr); }} className="flex-1 border border-gray-300 rounded-md px-3 py-1.5 text-sm" />
-                <select value={a.assigned_to || ""} onChange={(e) => { const arr = [...agenda]; arr[i] = { ...arr[i], assigned_to: e.target.value || null }; setAgenda(arr); }} className="w-full sm:w-40 border border-gray-300 rounded-md px-3 py-1.5 text-sm">
-                  <option value="">Assigned to</option>
-                  {boardMembers.map((m) => <option key={m.id} value={m.full_name}>{m.full_name}</option>)}
-                </select>
-                <button onClick={() => setAgenda(agenda.filter((_, j) => j !== i))} className="text-red-400 hover:text-red-600">&times;</button>
+              <div key={i} className="border border-gray-200 rounded-md p-3 mb-2">
+                <div className="flex gap-2 items-center mb-2">
+                  <span className="w-6 h-6 rounded-full bg-[#c9a227] text-white text-xs flex items-center justify-center flex-shrink-0">{i + 1}</span>
+                  <input type="text" placeholder="Agenda item" value={a.item} onChange={(e) => { const arr = [...agenda]; arr[i] = { ...arr[i], item: e.target.value }; setAgenda(arr); }} className="flex-1 border border-gray-300 rounded-md px-3 py-1.5 text-sm" />
+                  <select value={a.assigned_to || ""} onChange={(e) => { const arr = [...agenda]; arr[i] = { ...arr[i], assigned_to: e.target.value || null }; setAgenda(arr); }} className="w-full sm:w-40 border border-gray-300 rounded-md px-3 py-1.5 text-sm">
+                    <option value="">Assigned to</option>
+                    {boardMembers.map((m) => <option key={m.id} value={m.full_name}>{m.full_name}</option>)}
+                  </select>
+                  <button onClick={() => setAgenda(agenda.filter((_, j) => j !== i))} className="text-red-400 hover:text-red-600">&times;</button>
+                </div>
+                <textarea placeholder="Notes (optional)" rows={2} value={a.notes || ""} onChange={(e) => { const arr = [...agenda]; arr[i] = { ...arr[i], notes: e.target.value || null }; setAgenda(arr); }} className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm ml-8" style={{ width: "calc(100% - 2rem)" }} />
               </div>
             ))
           ) : (
             <div className="space-y-2">
               {data.agenda?.map((a, i) => (
-                <div key={i} className="flex items-start gap-3 p-2">
-                  <span className="w-6 h-6 rounded-full bg-[#c9a227] text-white text-xs flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</span>
-                  <div className="flex-1">
-                    <span className="text-sm text-gray-900">{a.item}</span>
-                    {a.assigned_to && <span className="ml-2 text-xs bg-blue-50 text-blue-700 rounded-full px-2 py-0.5">{a.assigned_to}</span>}
+                <div key={i} className="p-2">
+                  <div className="flex items-start gap-3">
+                    <span className="w-6 h-6 rounded-full bg-[#c9a227] text-white text-xs flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</span>
+                    <div className="flex-1">
+                      <span className="text-sm text-gray-900">{a.item}</span>
+                      {a.assigned_to && <span className="ml-2 text-xs bg-blue-50 text-blue-700 rounded-full px-2 py-0.5">{a.assigned_to}</span>}
+                    </div>
                   </div>
+                  {a.notes && <div className="ml-9 mt-1 text-xs text-gray-500 bg-gray-50 rounded px-3 py-2 whitespace-pre-wrap">{a.notes}</div>}
                 </div>
               ))}
             </div>

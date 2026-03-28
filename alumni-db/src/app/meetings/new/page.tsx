@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-interface AgendaItem { item: string; assigned_to: string | null; }
+interface AgendaItem { item: string; assigned_to: string | null; notes: string | null; }
 interface BoardMember { id: number; full_name: string; }
 
 export default function NewMeetingPage() {
@@ -11,7 +11,7 @@ export default function NewMeetingPage() {
   const [title, setTitle] = useState("");
   const [meetingDate, setMeetingDate] = useState("");
   const [location, setLocation] = useState("");
-  const [agenda, setAgenda] = useState<AgendaItem[]>([{ item: "", assigned_to: null }]);
+  const [agenda, setAgenda] = useState<AgendaItem[]>([{ item: "", assigned_to: null, notes: null }]);
   const [saving, setSaving] = useState(false);
   const [boardMembers, setBoardMembers] = useState<BoardMember[]>([]);
 
@@ -22,7 +22,7 @@ export default function NewMeetingPage() {
   }, []);
 
   function addAgendaItem() {
-    setAgenda([...agenda, { item: "", assigned_to: null }]);
+    setAgenda([...agenda, { item: "", assigned_to: null, notes: null }]);
   }
 
   function removeAgendaItem(i: number) {
@@ -94,16 +94,19 @@ export default function NewMeetingPage() {
             <button type="button" onClick={addAgendaItem} className="text-xs text-[#1a3a7a] hover:underline">+ Add Item</button>
           </div>
           {agenda.map((a, i) => (
-            <div key={i} className="flex gap-2 mb-2 items-center">
-              <span className="w-6 h-6 rounded-full bg-[#c9a227] text-white text-xs flex items-center justify-center flex-shrink-0">{i + 1}</span>
-              <input type="text" placeholder="Agenda item" value={a.item} onChange={(e) => updateAgendaItem(i, "item", e.target.value)} className="flex-1 border border-gray-300 rounded-md px-3 py-1.5 text-sm" />
-              <select value={a.assigned_to || ""} onChange={(e) => updateAgendaItem(i, "assigned_to", e.target.value)} className="w-full sm:w-40 border border-gray-300 rounded-md px-3 py-1.5 text-sm">
-                <option value="">Assigned to</option>
-                {boardMembers.map((m) => <option key={m.id} value={m.full_name}>{m.full_name}</option>)}
-              </select>
-              {agenda.length > 1 && (
-                <button type="button" onClick={() => removeAgendaItem(i)} className="text-red-400 hover:text-red-600">&times;</button>
-              )}
+            <div key={i} className="border border-gray-200 rounded-md p-3 mb-2">
+              <div className="flex gap-2 items-center mb-2">
+                <span className="w-6 h-6 rounded-full bg-[#c9a227] text-white text-xs flex items-center justify-center flex-shrink-0">{i + 1}</span>
+                <input type="text" placeholder="Agenda item" value={a.item} onChange={(e) => updateAgendaItem(i, "item", e.target.value)} className="flex-1 border border-gray-300 rounded-md px-3 py-1.5 text-sm" />
+                <select value={a.assigned_to || ""} onChange={(e) => updateAgendaItem(i, "assigned_to", e.target.value)} className="w-full sm:w-40 border border-gray-300 rounded-md px-3 py-1.5 text-sm">
+                  <option value="">Assigned to</option>
+                  {boardMembers.map((m) => <option key={m.id} value={m.full_name}>{m.full_name}</option>)}
+                </select>
+                {agenda.length > 1 && (
+                  <button type="button" onClick={() => removeAgendaItem(i)} className="text-red-400 hover:text-red-600">&times;</button>
+                )}
+              </div>
+              <textarea placeholder="Notes (optional)" rows={2} value={a.notes || ""} onChange={(e) => updateAgendaItem(i, "notes", e.target.value)} className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm ml-8" style={{ width: "calc(100% - 2rem)" }} />
             </div>
           ))}
         </div>
