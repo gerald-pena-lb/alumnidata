@@ -57,6 +57,9 @@ export default function NewMeetingPage() {
     if (res.ok) {
       const { id } = await res.json();
       router.push(`/meetings/${id}`);
+    } else {
+      const err = await res.json();
+      alert(`Failed to create meeting: ${err.error || "Unknown error"}`);
     }
     setSaving(false);
   }
