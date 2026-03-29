@@ -64,7 +64,7 @@ You can execute actions by outputting \`\`\`action JSON blocks. Supported action
 
 PARSING INSTRUCTIONS:
 - For unstructured project text: parse into structured project with logical sections and tasks
-- For member data: parse names and fields, map chapter variations, default status "alive"
+- For member data: parse names and fields, map chapter variations, default status "active"
 - For finance questions: use query_finances, query_unpaid_dues, query_collection_rate, or calculate_finances
 - For meeting requests: use create_meeting with agenda items
 - For "who hasn't paid" or "unpaid" questions: use query_unpaid_dues
@@ -94,7 +94,7 @@ async function getDbContext(): Promise<string> {
     { data: upcomingMeetings },
   ] = await Promise.all([
     supabase.from("members").select("*", { count: "exact", head: true }),
-    supabase.from("members").select("*", { count: "exact", head: true }).eq("status", "alive"),
+    supabase.from("members").select("*", { count: "exact", head: true }).in("status", ["active", "immortal"]),
     supabase.from("events").select("*", { count: "exact", head: true }),
     supabase.from("events").select("*", { count: "exact", head: true }).eq("type", "project"),
     supabase.from("project_tasks").select("*", { count: "exact", head: true }),
@@ -103,7 +103,7 @@ async function getDbContext(): Promise<string> {
     supabase.from("donations").select("amount").gte("date_given", `${y}-01-01`).lte("date_given", `${y}-12-31`),
     supabase.from("expenditures").select("amount").gte("date", `${y}-01-01`).lte("date", `${y}-12-31`),
     supabase.from("annual_dues").select("member_id").eq("year", y),
-    supabase.from("members").select("first_name, last_name, chapter").eq("status", "alive").order("created_at", { ascending: false }).limit(5),
+    supabase.from("members").select("first_name, last_name, chapter").in("status", ["active", "immortal"]).order("created_at", { ascending: false }).limit(5),
     supabase.from("events").select("name, date, type, status").neq("status", "completed").order("date").limit(5),
     supabase.from("meeting_summaries").select("title, meeting_date").order("meeting_date", { ascending: false }).limit(3),
   ]);
@@ -187,7 +187,7 @@ async function executeAction(payload: Record<string, unknown>): Promise<ActionRe
           const chapter = m.chapter ? (chapterMap[m.chapter.toLowerCase()] || m.chapter) : null;
           const { error } = await supabase.from("members").insert({
             first_name: firstName, last_name: lastName, full_name: fullName,
-            chapter, batch_name: m.batch_name || chapter, year: m.year || null, status: m.status || "alive",
+            chapter, batch_name: m.batch_name || chapter, year: m.year || null, status: m.status || "active",
             username: generateUsername(fullName), password_hash: "masig123", role: "brod",
           });
           if (!error) count++;
@@ -241,7 +241,7 @@ async function executeAction(payload: Record<string, unknown>): Promise<ActionRe
 
       case "query_unpaid_dues": {
         const y = Number((payload as { year: string }).year);
-        const { data: allActive } = await supabase.from("members").select("id, first_name, last_name, chapter").eq("status", "alive");
+        const { data: allActive } = await supabase.from("members").select("id, first_name, last_name, chapter").in("status", ["active", "immortal"]);
         const { data: paid } = await supabase.from("annual_dues").select("member_id").eq("year", y);
         const paidIds = new Set(paid?.map((p) => p.member_id) || []);
         const unpaid = (allActive || []).filter((m) => !paidIds.has(m.id));
@@ -255,7 +255,7 @@ async function executeAction(payload: Record<string, unknown>): Promise<ActionRe
 
       case "query_collection_rate": {
         const y = Number((payload as { year: string }).year);
-        const { count: active } = await supabase.from("members").select("*", { count: "exact", head: true }).eq("status", "alive");
+        const { count: active } = await supabase.from("members").select("*", { count: "exact", head: true }).in("status", ["active", "immortal"]);
         const { data: paid } = await supabase.from("annual_dues").select("member_id, amount").eq("year", y);
         const uniquePaid = new Set(paid?.map((p) => p.member_id)).size;
         const totalCollected = paid?.reduce((s, p) => s + Number(p.amount), 0) || 0;
@@ -293,7 +293,7 @@ async function executeAction(payload: Record<string, unknown>): Promise<ActionRe
       case "calculate_finances": {
         const calc = payload as { calculation: string; year: string };
         const y = Number(calc.year);
-        const { count: active } = await supabase.from("members").select("*", { count: "exact", head: true }).eq("status", "alive");
+        const { count: active } = await supabase.from("members").select("*", { count: "exact", head: true }).in("status", ["active", "immortal"]);
         const { data: d } = await supabase.from("annual_dues").select("amount, member_id").eq("year", y);
         const { data: don } = await supabase.from("donations").select("amount").gte("date_given", `${y}-01-01`).lte("date_given", `${y}-12-31`);
         const { data: exp } = await supabase.from("expenditures").select("amount").gte("date", `${y}-01-01`).lte("date", `${y}-12-31`);

@@ -17,7 +17,7 @@ export default function NewBrodPage() {
     current_company: "",
     title: "",
     industry: "",
-    status: "alive",
+    status: "active",
   });
   const [saving, setSaving] = useState(false);
 
@@ -169,8 +169,9 @@ export default function NewBrodPage() {
             onChange={(e) => update("status", e.target.value)}
             className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
           >
-            <option value="alive">Alive</option>
-            <option value="deceased">Deceased</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+            <option value="immortal">Immortal</option>
           </select>
         </div>
 

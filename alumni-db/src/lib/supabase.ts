@@ -35,7 +35,7 @@ export async function ensureAdminUsers(): Promise<{ error?: string } | null> {
         password_hash: "ubag1964",
         role: "admin",
         chapter: "Manila",
-        status: "alive",
+        status: "active",
       });
       if (insertError) return { error: `Insert failed: ${insertError.message}` };
     }

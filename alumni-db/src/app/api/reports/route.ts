@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
   const end = url.searchParams.get("end");
 
   if (type === "collection_rate") {
-    const { count: activeCount } = await supabase.from("members").select("*", { count: "exact", head: true }).eq("status", "alive");
+    const { count: activeCount } = await supabase.from("members").select("*", { count: "exact", head: true }).in("status", ["active", "immortal"]);
     const { data: paidMembers } = await supabase.from("annual_dues").select("member_id").eq("year", Number(year));
     const uniquePaid = new Set(paidMembers?.map((d) => d.member_id)).size;
     const { data: duesData } = await supabase.from("annual_dues").select("amount").eq("year", Number(year));

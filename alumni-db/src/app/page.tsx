@@ -24,7 +24,7 @@ export default function Home() {
 
       setStats({
         totalMembers: members.length,
-        activeMembers: members.filter((m: { status: string }) => m.status === "alive").length,
+        activeMembers: members.filter((m: { status: string }) => m.status === "active" || m.status === "immortal").length,
         totalDuesThisYear: rate.total_collected,
         collectionRate: rate.collection_rate,
       });

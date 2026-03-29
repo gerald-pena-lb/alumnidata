@@ -64,7 +64,7 @@ export default function BrodDetailPage({ params }: { params: Promise<{ id: strin
       current_company: data.current_company || "",
       title: data.title || "",
       industry: data.industry || "",
-      status: data.status || "alive",
+      status: data.status || "active",
     });
   }
 
@@ -140,7 +140,7 @@ export default function BrodDetailPage({ params }: { params: Promise<{ id: strin
           <h1 className="text-2xl font-bold text-gray-900">{member.last_name}, {member.first_name}</h1>
           <span
             className={`px-2 py-1 rounded-full text-xs font-medium ${
-              member.status === "alive" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"
+              member.status === "active" ? "bg-blue-100 text-blue-800" : member.status === "immortal" ? "bg-[#c9a227]/20 text-[#c9a227]" : "bg-red-100 text-red-800"
             }`}
           >
             {member.status}
@@ -217,12 +217,13 @@ export default function BrodDetailPage({ params }: { params: Promise<{ id: strin
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
                 <select
-                  value={form.status || "alive"}
+                  value={form.status || "active"}
                   onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
                   className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
                 >
-                  <option value="alive">Alive</option>
-                  <option value="deceased">Deceased</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                  <option value="immortal">Immortal</option>
                 </select>
               </div>
             </div>

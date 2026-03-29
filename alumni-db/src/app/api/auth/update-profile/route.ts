@@ -14,14 +14,20 @@ export async function PUT(req: NextRequest) {
   if (body.first_name !== undefined) updates.first_name = body.first_name;
   if (body.last_name !== undefined) updates.last_name = body.last_name;
   if (body.first_name !== undefined || body.last_name !== undefined) {
-    const fn = body.first_name ?? "";
-    const ln = body.last_name ?? "";
-    updates.full_name = `${fn} ${ln}`.trim();
+    updates.full_name = `${body.first_name ?? ""} ${body.last_name ?? ""}`.trim();
   }
+  if (body.chapter !== undefined) updates.chapter = body.chapter || null;
+  if (body.batch_name !== undefined) updates.batch_name = body.batch_name || null;
+  if (body.batch_letter !== undefined) updates.batch_letter = body.batch_letter || null;
+  if (body.year !== undefined) updates.year = body.year || null;
   if (body.phone_number !== undefined) updates.phone_number = body.phone_number || null;
   if (body.current_company !== undefined) updates.current_company = body.current_company || null;
   if (body.title !== undefined) updates.title = body.title || null;
   if (body.industry !== undefined) updates.industry = body.industry || null;
+  if (body.status !== undefined) updates.status = body.status || "active";
+
+  // Users cannot change their own role
+  // body.role is intentionally ignored
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: "No fields to update" }, { status: 400 });

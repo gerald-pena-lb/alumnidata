@@ -32,7 +32,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     current_company: body.current_company || null,
     title: body.title || null,
     industry: body.industry || null,
-    status: body.status || "alive",
+    status: body.status || "active",
     updated_at: new Date().toISOString(),
   }).eq("id", Number(id));
 

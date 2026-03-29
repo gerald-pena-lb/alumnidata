@@ -13,10 +13,13 @@ interface User {
   role: "admin" | "board_member" | "brod";
   chapter?: string;
   batch_name?: string;
+  batch_letter?: string;
+  year?: number;
   phone_number?: string;
   current_company?: string;
   title?: string;
   industry?: string;
+  status?: string;
 }
 
 interface AuthCtx {

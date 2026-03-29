@@ -162,8 +162,9 @@ export default function BrodsPage() {
             className="border border-gray-300 rounded-md px-3 py-2 text-sm"
           >
             <option value="">All Status</option>
-            <option value="alive">Alive</option>
-            <option value="deceased">Deceased</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+            <option value="immortal">Immortal</option>
           </select>
         </div>
       </div>
@@ -208,9 +209,11 @@ export default function BrodsPage() {
                 <td className="px-4 py-3 text-sm">
                   <span
                     className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      m.status === "alive"
-                        ? "bg-green-100 text-green-800"
-                        : "bg-gray-100 text-gray-800"
+                      m.status === "active"
+                        ? "bg-blue-100 text-blue-800"
+                        : m.status === "immortal"
+                        ? "bg-[#c9a227]/20 text-[#c9a227]"
+                        : "bg-red-100 text-red-800"
                     }`}
                   >
                     {m.status}

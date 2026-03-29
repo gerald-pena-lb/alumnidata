@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
         current_company: getField(row, "current_company", "currentcompany", "company", "employer") || null,
         title: getField(row, "title", "job_title", "jobtitle", "position") || null,
         industry: getField(row, "industry", "sector", "field") || null,
-        status: statusVal === "deceased" ? "deceased" : "alive",
+        status: ["active", "inactive", "immortal"].includes(statusVal) ? statusVal : "active",
         username: getField(row, "username") || generateUsername(fullName),
         password_hash: "masig123",
         role: "brod",
