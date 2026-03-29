@@ -36,6 +36,15 @@ export default function ProfilePage() {
   const [resetPwValue, setResetPwValue] = useState("masig123");
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
+  // Financial summary
+  const [totalDues, setTotalDues] = useState(0);
+  const [totalDonations, setTotalDonations] = useState(0);
+  const [duesHistory, setDuesHistory] = useState<{ year: number; amount: number }[]>([]);
+  const [donationHistory, setDonationHistory] = useState<{ amount: number; date_given: string }[]>([]);
+
+  // Same industry brods
+  const [industryBrods, setIndustryBrods] = useState<{ id: number; first_name: string; last_name: string; chapter: string; current_company: string; title: string }[]>([]);
+
   useEffect(() => {
     if (user) {
       setForm({
@@ -51,6 +60,23 @@ export default function ProfilePage() {
         industry: user.industry || "",
       });
       if (user.role === "admin") loadMembers();
+
+      // Load financial summary
+      fetch(`/api/dues?member_id=${user.id}`).then((r) => r.json()).then((data) => {
+        setDuesHistory(data || []);
+        setTotalDues((data || []).reduce((s: number, d: { amount: number }) => s + Number(d.amount), 0));
+      });
+      fetch(`/api/donations?member_id=${user.id}`).then((r) => r.json()).then((data) => {
+        setDonationHistory(data || []);
+        setTotalDonations((data || []).reduce((s: number, d: { amount: number }) => s + Number(d.amount), 0));
+      });
+
+      // Load same-industry brods
+      if (user.industry) {
+        fetch(`/api/members?industry=${encodeURIComponent(user.industry)}&status=active`).then((r) => r.json()).then((data) => {
+          setIndustryBrods((data || []).filter((m: { id: number }) => m.id !== user.id));
+        });
+      }
     }
   }, [user]);
 
@@ -213,6 +239,76 @@ export default function ProfilePage() {
           {pwMsg && <p className={`text-sm ${pwMsg.includes("success") ? "text-green-600" : "text-red-600"}`}>{pwMsg}</p>}
         </form>
       </div>
+
+      {/* Financial Summary */}
+      <div className="bg-white rounded-lg shadow p-6 mb-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">My Financial Summary</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+          <div className="bg-blue-50 rounded-lg p-4">
+            <div className="text-sm text-blue-600">Total Dues Paid</div>
+            <div className="text-2xl font-bold text-blue-800">₱{totalDues.toLocaleString()}</div>
+            <div className="text-xs text-blue-500 mt-1">{duesHistory.length} payment{duesHistory.length !== 1 ? "s" : ""} across {new Set(duesHistory.map((d) => d.year)).size} year{new Set(duesHistory.map((d) => d.year)).size !== 1 ? "s" : ""}</div>
+          </div>
+          <div className="bg-[#c9a227]/10 rounded-lg p-4">
+            <div className="text-sm text-[#c9a227]">Total Donations Given</div>
+            <div className="text-2xl font-bold text-[#c9a227]">₱{totalDonations.toLocaleString()}</div>
+            <div className="text-xs text-[#b08f1f] mt-1">{donationHistory.length} donation{donationHistory.length !== 1 ? "s" : ""}</div>
+          </div>
+        </div>
+
+        {duesHistory.length > 0 && (
+          <div className="mb-3">
+            <h3 className="text-xs font-semibold text-gray-500 mb-2">Dues History</h3>
+            <div className="flex flex-wrap gap-2">
+              {duesHistory.map((d, i) => (
+                <span key={i} className="text-xs bg-blue-50 text-blue-700 rounded-full px-3 py-1">
+                  {d.year}: ₱{Number(d.amount).toLocaleString()}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {donationHistory.length > 0 && (
+          <div>
+            <h3 className="text-xs font-semibold text-gray-500 mb-2">Donation History</h3>
+            <div className="flex flex-wrap gap-2">
+              {donationHistory.map((d, i) => (
+                <span key={i} className="text-xs bg-[#c9a227]/10 text-[#c9a227] rounded-full px-3 py-1">
+                  {d.date_given}: ₱{Number(d.amount).toLocaleString()}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {duesHistory.length === 0 && donationHistory.length === 0 && (
+          <p className="text-sm text-gray-400">No financial records yet.</p>
+        )}
+      </div>
+
+      {/* Same Industry Brods */}
+      {user.industry && industryBrods.length > 0 && (
+        <div className="bg-white rounded-lg shadow p-6 mb-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-1">Brods in {user.industry}</h2>
+          <p className="text-xs text-gray-500 mb-4">{industryBrods.length} other brod{industryBrods.length !== 1 ? "s" : ""} in the same industry</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {industryBrods.map((b) => (
+              <div key={b.id} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
+                <div className="w-10 h-10 rounded-full bg-[#1a3a7a] text-white flex items-center justify-center text-sm font-bold flex-shrink-0">
+                  {(b.first_name || "?").charAt(0)}{(b.last_name || "").charAt(0)}
+                </div>
+                <div className="min-w-0">
+                  <div className="text-sm font-medium text-gray-900 truncate">{b.first_name} {b.last_name}</div>
+                  {b.title && <div className="text-xs text-gray-500 truncate">{b.title}</div>}
+                  {b.current_company && <div className="text-xs text-gray-400 truncate">{b.current_company}</div>}
+                  {b.chapter && <span className="text-xs bg-blue-50 text-blue-600 rounded-full px-2 py-0.5">{b.chapter}</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Member Management (Admin only) */}
       {user.role === "admin" && (
