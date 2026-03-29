@@ -9,9 +9,9 @@ export async function GET(req: NextRequest) {
 
   const { data } = await supabase
     .from("members")
-    .select("id, username, full_name, role, chapter, created_at")
+    .select("id, username, full_name, role, chapter, status, active_start_date, active_end_date, created_at")
     .not("username", "is", null)
-    .order("created_at", { ascending: false });
+    .order("full_name");
 
   const mapped = (data || []).map((u) => ({ ...u, name: u.full_name }));
   return NextResponse.json(mapped);

@@ -16,7 +16,7 @@ export default function ProfilePage() {
   const { user, refresh } = useAuth();
   const [form, setForm] = useState({
     first_name: "", last_name: "", chapter: "", batch_name: "", batch_letter: "", year: "",
-    phone_number: "", current_company: "", title: "", industry: "", status: "active",
+    phone_number: "", current_company: "", title: "", industry: "",
   });
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
@@ -27,9 +27,14 @@ export default function ProfilePage() {
   const [changingPw, setChangingPw] = useState(false);
 
   // Admin: member management
-  const [members, setMembers] = useState<{ id: number; username: string; full_name: string; name: string; role: string; chapter: string; status: string }[]>([]);
+  const [members, setMembers] = useState<{
+    id: number; username: string; full_name: string; name: string;
+    role: string; chapter: string; status: string;
+    active_start_date: string | null; active_end_date: string | null;
+  }[]>([]);
   const [resetPwId, setResetPwId] = useState<number | null>(null);
   const [resetPwValue, setResetPwValue] = useState("masig123");
+  const [expandedId, setExpandedId] = useState<number | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -44,7 +49,6 @@ export default function ProfilePage() {
         current_company: user.current_company || "",
         title: user.title || "",
         industry: user.industry || "",
-        status: user.status || "active",
       });
       if (user.role === "admin") loadMembers();
     }
@@ -57,15 +61,11 @@ export default function ProfilePage() {
 
   async function handleSaveProfile(e: React.FormEvent) {
     e.preventDefault();
-    setSaving(true);
-    setMsg("");
+    setSaving(true); setMsg("");
     const res = await fetch("/api/auth/update-profile", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...form,
-        year: form.year ? Number(form.year) : null,
-      }),
+      body: JSON.stringify({ ...form, year: form.year ? Number(form.year) : null }),
     });
     if (res.ok) { setMsg("Profile updated"); refresh(); }
     else { const d = await res.json(); setMsg(d.error || "Update failed"); }
@@ -74,8 +74,7 @@ export default function ProfilePage() {
 
   async function handleChangePassword(e: React.FormEvent) {
     e.preventDefault();
-    setChangingPw(true);
-    setPwMsg("");
+    setChangingPw(true); setPwMsg("");
     const res = await fetch("/api/auth/change-password", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -87,11 +86,11 @@ export default function ProfilePage() {
     setChangingPw(false);
   }
 
-  async function handleChangeRole(memberId: number, role: string) {
+  async function updateMember(memberId: number, updates: Record<string, unknown>) {
     await fetch(`/api/users/${memberId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ role }),
+      body: JSON.stringify(updates),
     });
     loadMembers();
   }
@@ -119,7 +118,7 @@ export default function ProfilePage() {
   if (!user) return <div className="text-center py-8 text-gray-500">Loading...</div>;
 
   return (
-    <div className="max-w-3xl mx-auto">
+    <div className="max-w-4xl mx-auto">
       <h1 className="text-2xl font-bold text-gray-900 mb-6">Profile</h1>
 
       {/* Profile Info */}
@@ -132,12 +131,8 @@ export default function ProfilePage() {
             <div className="font-semibold text-gray-900">{user.first_name} {user.last_name}</div>
             <div className="text-sm text-gray-500">@{user.username}</div>
             <div className="flex gap-2 mt-1">
-              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${roleColors[user.role]}`}>
-                {roleLabels[user.role]}
-              </span>
-              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColor}`}>
-                {statusLabel}
-              </span>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${roleColors[user.role]}`}>{roleLabels[user.role]}</span>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColor}`}>{statusLabel}</span>
             </div>
           </div>
         </div>
@@ -157,12 +152,6 @@ export default function ProfilePage() {
               <select value={form.chapter} onChange={(e) => setForm((f) => ({ ...f, chapter: e.target.value }))} className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
                 <option value="">Select Chapter</option>
                 {CHAPTERS.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-              <select value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))} className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
-                {STATUS_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
               </select>
             </div>
             <div>
@@ -189,7 +178,7 @@ export default function ProfilePage() {
               <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
               <input type="text" value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" />
             </div>
-            <div className="sm:col-span-2">
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Industry</label>
               <select value={form.industry} onChange={(e) => setForm((f) => ({ ...f, industry: e.target.value }))} className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
                 <option value="">Select Industry</option>
@@ -229,58 +218,120 @@ export default function ProfilePage() {
       {user.role === "admin" && (
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Member Management</h2>
-          <div className="overflow-x-auto"><table className="min-w-full divide-y divide-gray-200">
-            <thead>
-              <tr>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Name</th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Username</th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Status</th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Role</th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {members.map((m) => {
-                const mStatusOpt = STATUS_OPTIONS.find((s) => s.value === m.status);
-                return (
-                  <tr key={m.id}>
-                    <td className="px-3 py-2 text-sm">{m.full_name}</td>
-                    <td className="px-3 py-2 text-sm text-gray-500">@{m.username}</td>
-                    <td className="px-3 py-2 text-sm">
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${mStatusOpt?.color || "bg-gray-100 text-gray-600"}`}>
-                        {mStatusOpt?.label || m.status}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 text-sm">
-                      <select
-                        value={m.role}
-                        onChange={(e) => handleChangeRole(m.id, e.target.value)}
-                        disabled={m.id === user.id}
-                        className="border border-gray-300 rounded px-2 py-1 text-xs"
-                      >
-                        <option value="brod">Brod</option>
-                        <option value="board_member">Board Member</option>
-                        <option value="admin">Admin</option>
-                      </select>
-                    </td>
-                    <td className="px-3 py-2 text-sm">
-                      {resetPwId === m.id ? (
-                        <div className="flex gap-1 items-center">
-                          <input type="text" value={resetPwValue} onChange={(e) => setResetPwValue(e.target.value)} className="border border-gray-300 rounded px-2 py-1 text-xs w-24" />
-                          <button onClick={() => handleResetPassword(m.id)} className="text-green-600 hover:text-green-800 text-xs">Save</button>
-                          <button onClick={() => setResetPwId(null)} className="text-gray-400 hover:text-gray-600 text-xs">Cancel</button>
+          <div className="space-y-2">
+            {members.map((m) => {
+              const mStatus = STATUS_OPTIONS.find((s) => s.value === m.status);
+              const isExpanded = expandedId === m.id;
+              return (
+                <div key={m.id} className="border border-gray-200 rounded-lg overflow-hidden">
+                  {/* Summary row */}
+                  <div
+                    className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50"
+                    onClick={() => setExpandedId(isExpanded ? null : m.id)}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm font-medium text-gray-900">{m.full_name}</span>
+                      <span className="text-xs text-gray-400 ml-2">@{m.username}</span>
+                    </div>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${mStatus?.color || "bg-gray-100 text-gray-600"}`}>
+                      {mStatus?.label || m.status}
+                    </span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${roleColors[m.role] || "bg-gray-100"}`}>
+                      {roleLabels[m.role] || m.role}
+                    </span>
+                    <svg className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+
+                  {/* Expanded details */}
+                  {isExpanded && (
+                    <div className="px-4 pb-4 pt-2 bg-gray-50 border-t border-gray-200 space-y-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        {/* Status */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-500 mb-1">Status</label>
+                          <select
+                            value={m.status}
+                            onChange={(e) => updateMember(m.id, { status: e.target.value })}
+                            className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm"
+                          >
+                            {STATUS_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                          </select>
                         </div>
-                      ) : (
-                        <button onClick={() => { setResetPwId(m.id); setResetPwValue("masig123"); }} className="text-[#1a3a7a] hover:underline text-xs">
-                          Reset Password
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table></div>
+
+                        {/* Role */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-500 mb-1">Role</label>
+                          <select
+                            value={m.role}
+                            onChange={(e) => updateMember(m.id, { role: e.target.value })}
+                            disabled={m.id === user.id}
+                            className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm disabled:opacity-50"
+                          >
+                            <option value="brod">Brod</option>
+                            <option value="board_member">Board Member</option>
+                            <option value="admin">Admin</option>
+                          </select>
+                        </div>
+
+                        {/* Chapter */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-500 mb-1">Chapter</label>
+                          <span className="text-sm text-gray-700">{m.chapter || "—"}</span>
+                        </div>
+                      </div>
+
+                      {/* Active Duration */}
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Active Membership Period</label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs text-gray-400 mb-0.5">Start Date</label>
+                            <input
+                              type="date"
+                              value={m.active_start_date || ""}
+                              onChange={(e) => updateMember(m.id, { active_start_date: e.target.value || null })}
+                              className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-400 mb-0.5">End Date</label>
+                            <input
+                              type="date"
+                              value={m.active_end_date || ""}
+                              onChange={(e) => updateMember(m.id, { active_end_date: e.target.value || null })}
+                              className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm"
+                            />
+                          </div>
+                        </div>
+                        {m.active_start_date && m.active_end_date && (
+                          <p className="text-xs text-gray-400 mt-1">
+                            Duration: {Math.ceil((new Date(m.active_end_date).getTime() - new Date(m.active_start_date).getTime()) / (1000 * 60 * 60 * 24))} days
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex gap-3 pt-1">
+                        {resetPwId === m.id ? (
+                          <div className="flex gap-2 items-center">
+                            <input type="text" value={resetPwValue} onChange={(e) => setResetPwValue(e.target.value)} className="border border-gray-300 rounded px-2 py-1 text-xs w-28" placeholder="New password" />
+                            <button onClick={() => handleResetPassword(m.id)} className="text-green-600 hover:text-green-800 text-xs font-medium">Save</button>
+                            <button onClick={() => setResetPwId(null)} className="text-gray-400 hover:text-gray-600 text-xs">Cancel</button>
+                          </div>
+                        ) : (
+                          <button onClick={() => { setResetPwId(m.id); setResetPwValue("masig123"); }} className="text-xs text-[#1a3a7a] hover:underline">
+                            Reset Password
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>

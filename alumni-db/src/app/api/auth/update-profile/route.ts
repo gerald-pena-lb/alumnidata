@@ -24,7 +24,8 @@ export async function PUT(req: NextRequest) {
   if (body.current_company !== undefined) updates.current_company = body.current_company || null;
   if (body.title !== undefined) updates.title = body.title || null;
   if (body.industry !== undefined) updates.industry = body.industry || null;
-  if (body.status !== undefined) updates.status = body.status || "active";
+  // Status and role are admin-controlled only — intentionally ignored here
+  // if (body.status !== undefined) updates.status = body.status;
 
   // Users cannot change their own role
   // body.role is intentionally ignored
