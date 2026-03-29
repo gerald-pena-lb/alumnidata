@@ -80,6 +80,8 @@ export default function MeetingDetailPage({ params }: { params: Promise<{ id: st
   const [editingNoteIdx, setEditingNoteIdx] = useState<number | null>(null);
   const [noteDraft, setNoteDraft] = useState("");
   const [creatingTasks, setCreatingTasks] = useState(false);
+  const [addingTaskIdx, setAddingTaskIdx] = useState<number | null>(null);
+  const [newTask, setNewTask] = useState({ task: "", assigned_to: "", due_date: "" });
 
   useEffect(() => {
     if (summarizing) {
@@ -411,7 +413,10 @@ export default function MeetingDetailPage({ params }: { params: Promise<{ id: st
                     {a.action_items.map((task, ti) => (
                       <div key={ti} className="flex items-center gap-2 text-xs">
                         <input type="text" value={task.task} onChange={(e) => { const arr = [...agenda]; const tasks = [...(arr[i].action_items || [])]; tasks[ti] = { ...tasks[ti], task: e.target.value }; arr[i] = { ...arr[i], action_items: tasks }; setAgenda(arr); }} className="flex-1 border border-gray-300 rounded px-2 py-1" placeholder="Task" />
-                        <input type="text" value={task.assigned_to || ""} onChange={(e) => { const arr = [...agenda]; const tasks = [...(arr[i].action_items || [])]; tasks[ti] = { ...tasks[ti], assigned_to: e.target.value || null }; arr[i] = { ...arr[i], action_items: tasks }; setAgenda(arr); }} className="w-28 border border-gray-300 rounded px-2 py-1" placeholder="Assigned to" />
+                        <select value={task.assigned_to || ""} onChange={(e) => { const arr = [...agenda]; const tasks = [...(arr[i].action_items || [])]; tasks[ti] = { ...tasks[ti], assigned_to: e.target.value || null }; arr[i] = { ...arr[i], action_items: tasks }; setAgenda(arr); }} className="w-32 border border-gray-300 rounded px-2 py-1">
+                          <option value="">Assign to</option>
+                          {boardMembers.map((m) => <option key={m.id} value={m.full_name}>{m.full_name}</option>)}
+                        </select>
                         <input type="date" value={task.due_date || ""} onChange={(e) => { const arr = [...agenda]; const tasks = [...(arr[i].action_items || [])]; tasks[ti] = { ...tasks[ti], due_date: e.target.value || null }; arr[i] = { ...arr[i], action_items: tasks }; setAgenda(arr); }} className="w-32 border border-gray-300 rounded px-2 py-1" />
                         <button onClick={() => { const arr = [...agenda]; const tasks = (arr[i].action_items || []).filter((_, j) => j !== ti); arr[i] = { ...arr[i], action_items: tasks }; setAgenda(arr); }} className="text-red-400 hover:text-red-600">&times;</button>
                       </div>
@@ -517,28 +522,34 @@ export default function MeetingDetailPage({ params }: { params: Promise<{ id: st
                     </div>
                   )}
 
-                  {/* Add task button */}
+                  {/* Add task */}
                   <div className="ml-9 mt-1 print:hidden">
-                    <button
-                      onClick={() => {
-                        const taskDesc = prompt("Task description:");
-                        if (!taskDesc) return;
-                        const assignee = prompt("Assigned to (name):");
-                        const dueDate = prompt("Due date (YYYY-MM-DD):", new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10));
-                        const updated = [...(data.agenda || [])];
-                        const tasks = [...(updated[i].action_items || [])];
-                        tasks.push({ task: taskDesc, assigned_to: assignee || null, due_date: dueDate || null, done: false });
-                        updated[i] = { ...updated[i], action_items: tasks };
-                        fetch(`/api/minutes/${id}`, {
-                          method: "PUT",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ agenda: updated }),
-                        }).then(() => load());
-                      }}
-                      className="text-xs text-gray-400 hover:text-[#1a3a7a] hover:underline"
-                    >
-                      + Add task
-                    </button>
+                    {addingTaskIdx === i ? (
+                      <div className="flex flex-col sm:flex-row gap-2 bg-gray-50 rounded-md p-2">
+                        <input type="text" placeholder="Task description" value={newTask.task} onChange={(e) => setNewTask((t) => ({ ...t, task: e.target.value }))} className="flex-1 border border-gray-300 rounded px-2 py-1 text-xs" />
+                        <select value={newTask.assigned_to} onChange={(e) => setNewTask((t) => ({ ...t, assigned_to: e.target.value }))} className="border border-gray-300 rounded px-2 py-1 text-xs w-full sm:w-32">
+                          <option value="">Assign to</option>
+                          {boardMembers.map((m) => <option key={m.id} value={m.full_name}>{m.full_name}</option>)}
+                        </select>
+                        <input type="date" value={newTask.due_date} onChange={(e) => setNewTask((t) => ({ ...t, due_date: e.target.value }))} className="border border-gray-300 rounded px-2 py-1 text-xs w-full sm:w-32" />
+                        <div className="flex gap-1">
+                          <button onClick={async () => {
+                            if (!newTask.task.trim()) return;
+                            const updated = [...(data.agenda || [])];
+                            const tasks = [...(updated[i].action_items || [])];
+                            tasks.push({ task: newTask.task, assigned_to: newTask.assigned_to || null, due_date: newTask.due_date || null, done: false });
+                            updated[i] = { ...updated[i], action_items: tasks };
+                            await fetch(`/api/minutes/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ agenda: updated }) });
+                            setAddingTaskIdx(null); setNewTask({ task: "", assigned_to: "", due_date: "" }); load();
+                          }} className="text-xs text-green-600 hover:underline whitespace-nowrap">Save</button>
+                          <button onClick={() => { setAddingTaskIdx(null); setNewTask({ task: "", assigned_to: "", due_date: "" }); }} className="text-xs text-gray-400 hover:underline">Cancel</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button onClick={() => { setAddingTaskIdx(i); setNewTask({ task: "", assigned_to: "", due_date: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10) }); }} className="text-xs text-gray-400 hover:text-[#1a3a7a] hover:underline">
+                        + Add task
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}

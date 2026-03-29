@@ -43,6 +43,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [newSection, setNewSection] = useState("");
   const [showSectionForm, setShowSectionForm] = useState(false);
+  const [boardMembers, setBoardMembers] = useState<{ id: number; full_name: string }[]>([]);
 
   async function load() {
     const [eventRes, tasksRes] = await Promise.all([
@@ -67,6 +68,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
 
   useEffect(() => {
     load();
+    fetch("/api/members?role=board_and_admin").then((r) => r.json()).then(setBoardMembers);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
@@ -269,7 +271,10 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
             </div>
             <textarea placeholder="Description (optional)" rows={2} value={taskForm.description} onChange={(e) => setTaskForm((f) => ({ ...f, description: e.target.value }))} className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" />
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <input type="text" placeholder="Assigned to" value={taskForm.assignee} onChange={(e) => setTaskForm((f) => ({ ...f, assignee: e.target.value }))} className="border border-gray-300 rounded-md px-3 py-2 text-sm" />
+              <select value={taskForm.assignee} onChange={(e) => setTaskForm((f) => ({ ...f, assignee: e.target.value }))} className="border border-gray-300 rounded-md px-3 py-2 text-sm">
+                <option value="">Assigned to</option>
+                {boardMembers.map((m) => <option key={m.id} value={m.full_name}>{m.full_name}</option>)}
+              </select>
               <select value={taskForm.priority} onChange={(e) => setTaskForm((f) => ({ ...f, priority: e.target.value }))} className="border border-gray-300 rounded-md px-3 py-2 text-sm">
                 <option value="low">Low</option>
                 <option value="medium">Medium</option>
