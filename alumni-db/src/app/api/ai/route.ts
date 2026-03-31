@@ -88,6 +88,25 @@ Or list all meetings:
 {"action":"query_meeting_action_items"}
 \`\`\`
 
+12. query_project - Get project details with all tasks, sections, assignees, progress
+\`\`\`action
+{"action":"query_project","project_id":1}
+\`\`\`
+Or list all projects:
+\`\`\`action
+{"action":"query_project","list":true}
+\`\`\`
+
+13. query_tasks_by_assignee - Get all tasks assigned to a specific person across all projects
+\`\`\`action
+{"action":"query_tasks_by_assignee","assignee":"Gerald Pena"}
+\`\`\`
+
+14. query_overdue_tasks - Get all tasks past their due date that aren't done
+\`\`\`action
+{"action":"query_overdue_tasks"}
+\`\`\`
+
 DATABASE SCHEMA (mga tables at fields na available sa akin):
 - members: id, first_name, last_name, full_name, chapter (Diliman/Los Banos/Manila), batch_name, batch_letter, year, phone_number, current_company, title, INDUSTRY, status (active/inactive/immortal), role (admin/board_member/brod), username
 - annual_dues: id, member_id, year, amount, date_paid, remarks
@@ -118,6 +137,10 @@ PARSING INSTRUCTIONS:
 - For "what happened in the meeting" o "meeting summary" — use query_meetings with meeting_id
 - For "pending tasks" o "action items" across meetings — use query_meeting_action_items
 - Kung nasa context na ang meeting info, sagutin na directly — huwag nang mag-action block!
+- For project questions — check Active Projects sa context muna. Kung wala, use query_project action.
+- For "what tasks does X have?" o "sino may pinakamaraming tasks?" — use query_tasks_by_assignee o analyze from context
+- For "any overdue tasks?" — use query_overdue_tasks
+- Use your LLM reasoning para mag-analyze: workload balance, bottlenecks, progress trends, etc.
 
 CURRENT DATABASE STATE:
 {DB_CONTEXT}`;
@@ -179,6 +202,30 @@ async function getDbContext(): Promise<string> {
     supabase.from("meeting_summaries").select("id, title, meeting_date, location, participants, agenda, action_items").order("meeting_date", { ascending: false }).limit(5),
   ]);
 
+  // Get active projects with tasks
+  const { data: activeProjects } = await supabase.from("events").select("id, name, description, date, status").eq("type", "project").neq("status", "completed").order("date").limit(10);
+  const projectDetails: string[] = [];
+  for (const proj of activeProjects || []) {
+    const { data: tasks } = await supabase.from("project_tasks").select("title, section, assignee, status, due_date, priority").eq("event_id", proj.id);
+    const tasksBySection: Record<string, typeof tasks> = {};
+    for (const t of tasks || []) {
+      const sec = t.section || "General";
+      if (!tasksBySection[sec]) tasksBySection[sec] = [];
+      tasksBySection[sec].push(t);
+    }
+    const totalTasks = tasks?.length || 0;
+    const doneTasks = tasks?.filter(t => t.status === "done").length || 0;
+    const progress = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
+    let detail = `- #${proj.id}: ${proj.name} (${proj.status}, ${proj.date}) - ${totalTasks} tasks, ${progress}% done`;
+    for (const [sec, secTasks] of Object.entries(tasksBySection)) {
+      detail += `\n  [${sec}]`;
+      for (const t of secTasks || []) {
+        detail += `\n    ${t.status === "done" ? "✓" : t.status === "in_progress" ? "◐" : "○"} ${t.title}${t.assignee ? ` → ${t.assignee}` : ""}${t.due_date ? ` (due: ${t.due_date})` : ""} [${t.priority}]`;
+      }
+    }
+    projectDetails.push(detail);
+  }
+
   // Get industry and chapter breakdowns
   const { data: allMembers } = await supabase.from("members").select("industry, chapter").in("status", ["active", "immortal"]);
   const industries: Record<string, number> = {};
@@ -213,6 +260,9 @@ Industries: ${topIndustries || "None"}
 
 Recent members: ${(recentMembers || []).map((m: { first_name: string; last_name: string; chapter: string }) => `${m.first_name} ${m.last_name} (${m.chapter || "N/A"})`).join(", ") || "None"}
 Upcoming events: ${(upcomingEvents || []).map((e: { name: string; date: string; type: string }) => `${e.name} (${e.type}, ${e.date})`).join(", ") || "None"}
+
+Active Projects (with tasks):
+${projectDetails.length > 0 ? projectDetails.join("\n") : "None"}
 Recent meetings:
 ${(upcomingMeetings || []).map((m: { id: number; title: string; meeting_date: string; location: string; participants: { name: string }[]; agenda: { item: string; assigned_to?: string; done?: boolean; action_items?: { task: string; done?: boolean }[] }[]; action_items: { task: string; assigned_to?: string }[] }) => {
     const pCount = (m.participants || []).length;
@@ -481,6 +531,88 @@ async function executeAction(payload: Record<string, unknown>): Promise<ActionRe
             : "No pending action items found",
           success: true,
         });
+        break;
+      }
+
+      case "query_project": {
+        const qp = payload as { project_id?: number; list?: boolean };
+        if (qp.project_id) {
+          const { data: proj } = await supabase.from("events").select("*").eq("id", qp.project_id).single();
+          if (!proj) { results.push({ label: "Project not found", success: false }); break; }
+          const { data: tasks } = await supabase.from("project_tasks").select("*").eq("event_id", qp.project_id);
+          const totalTasks = tasks?.length || 0;
+          const doneTasks = tasks?.filter(t => t.status === "done").length || 0;
+          const inProgress = tasks?.filter(t => t.status === "in_progress").length || 0;
+          const progress = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
+
+          const tasksBySection: Record<string, typeof tasks> = {};
+          for (const t of tasks || []) {
+            const sec = t.section || "General";
+            if (!tasksBySection[sec]) tasksBySection[sec] = [];
+            tasksBySection[sec].push(t);
+          }
+
+          // Workload analysis
+          const assigneeCounts: Record<string, { total: number; done: number }> = {};
+          for (const t of tasks || []) {
+            const a = t.assignee || "Unassigned";
+            if (!assigneeCounts[a]) assigneeCounts[a] = { total: 0, done: 0 };
+            assigneeCounts[a].total++;
+            if (t.status === "done") assigneeCounts[a].done++;
+          }
+
+          let label = `Project: ${proj.name}\nStatus: ${proj.status}, Date: ${proj.date}\nDescription: ${proj.description || "N/A"}\nProgress: ${doneTasks}/${totalTasks} done (${progress}%), ${inProgress} in progress`;
+          label += `\n\nWorkload:`;
+          for (const [name, counts] of Object.entries(assigneeCounts)) {
+            label += `\n• ${name}: ${counts.total} tasks (${counts.done} done)`;
+          }
+          label += `\n\nSections & Tasks:`;
+          for (const [sec, secTasks] of Object.entries(tasksBySection)) {
+            label += `\n[${sec}]`;
+            for (const t of secTasks || []) {
+              label += `\n  ${t.status === "done" ? "✓" : t.status === "in_progress" ? "◐" : "○"} ${t.title}${t.assignee ? ` → ${t.assignee}` : ""}${t.due_date ? ` (due: ${t.due_date})` : ""} [${t.priority}]`;
+            }
+          }
+          results.push({ label, success: true });
+        } else {
+          const { data: projects } = await supabase.from("events").select("id, name, date, status, description").eq("type", "project").order("date", { ascending: false }).limit(20);
+          for (const p of projects || []) {
+            const { count } = await supabase.from("project_tasks").select("*", { count: "exact", head: true }).eq("event_id", p.id);
+            const { count: doneCount } = await supabase.from("project_tasks").select("*", { count: "exact", head: true }).eq("event_id", p.id).eq("status", "done");
+            const prog = (count || 0) > 0 ? Math.round(((doneCount || 0) / (count || 1)) * 100) : 0;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (p as any)._summary = `${count || 0} tasks, ${prog}% done`;
+          }
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const list = (projects || []).map((p: any) => `#${p.id}: ${p.name} (${p.status}, ${p.date}) - ${p._summary}`).join("\n• ");
+          results.push({ label: `${projects?.length || 0} project(s):\n• ${list}`, success: true });
+        }
+        break;
+      }
+
+      case "query_tasks_by_assignee": {
+        const { assignee } = payload as { assignee: string };
+        const { data: tasks } = await supabase.from("project_tasks").select("*, events(name)").ilike("assignee", `%${assignee}%`);
+        const pending = (tasks || []).filter(t => t.status !== "done");
+        const done = (tasks || []).filter(t => t.status === "done");
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const taskList = pending.map((t: any) => `${t.status === "in_progress" ? "◐" : "○"} ${t.title} [${t.events?.name || "Unknown project"}]${t.due_date ? ` (due: ${t.due_date})` : ""} [${t.priority}]`).join("\n• ");
+        let label = `Tasks for "${assignee}": ${tasks?.length || 0} total (${pending.length} pending, ${done.length} done)`;
+        if (taskList) label += `\n\nPending:\n• ${taskList}`;
+        results.push({ label, success: true });
+        break;
+      }
+
+      case "query_overdue_tasks": {
+        const today = new Date().toISOString().slice(0, 10);
+        const { data: overdue } = await supabase.from("project_tasks").select("*, events(name)").lt("due_date", today).neq("status", "done").not("due_date", "is", null);
+        if (!overdue?.length) {
+          results.push({ label: "Walang overdue tasks brod! Panalo!", success: true });
+        } else {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const list = overdue.slice(0, 20).map((t: any) => `${t.title} → ${t.assignee || "unassigned"} (due: ${t.due_date}) [${t.events?.name || "Unknown"}]`).join("\n• ");
+          results.push({ label: `${overdue.length} overdue task(s):\n• ${list}`, success: true });
+        }
         break;
       }
 
