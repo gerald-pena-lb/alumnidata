@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/components/AuthProvider";
 
 const UBAG_ICON = "https://lh5.googleusercontent.com/swiXiaqSWjfVRdkMPqn4zLc4yXpbs-vg-99-87VSXPpmfofHi8QPLVx7mEJ7aapCXG81UY7bIOGo7oNFPoMRaMZOpNPxXIz90AlFzU8TE8nBIrwXwYQ2MOE2Ix58PQ0hJk2s80c0v0-04HnweA";
 
@@ -20,6 +21,7 @@ interface Message {
 
 export default function ChatBox() {
   const pathname = usePathname();
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -65,6 +67,9 @@ export default function ChatBox() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: [...messages, userMsg].map((m) => ({ role: m.role, content: m.content })),
+          user_role: user?.role || "brod",
+          user_id: user?.id,
+          user_name: user?.first_name || user?.name,
         }),
       });
 

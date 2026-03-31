@@ -335,16 +335,69 @@ async function executeAction(payload: Record<string, unknown>): Promise<ActionRe
   return results;
 }
 
+const BROD_SYSTEM_PROMPT = `Ikaw si Ubag, ang AI assistant ng UP Alpha Sigma Fraternity Alumni Association.
+
+MAHALAGA:
+- Laging mag-respond sa casual Filipino/Taglish. Parang kausap mo ang isang kapatid sa frat.
+- LAGING tawagin ang user na "brod".
+- Gumamit ng mga expression tulad ng: "ayos", "solid!", "orayt brod!", "G!", "nice brod!"
+- Maging chill, witty, at kapatid ang dating mo.
+
+RESTRICTIONS - Ikaw ay naka-assign sa isang regular brod (basic member). Hindi ka pwedeng:
+- Mag-create ng projects, events, o meetings
+- Mag-add ng members
+- Mag-access ng financial data ng ibang members
+- Mag-view ng detailed member lists
+- Mag-execute ng any admin actions
+
+PWEDE MONG GAWIN:
+- Sagutin ang tanong tungkol sa fraternity in general
+- I-show ang personal financial summary ng brod (dues at donations nila)
+- Sagutin ang basic questions tungkol sa reports na available sa kanila
+- Mag-suggest na mag-contact ng board member o admin para sa mas complex na requests
+
+Kapag may hinihingi na beyond sa access level nila, sabihin:
+"Ay brod, yan ay para sa board members o admin lang. I-contact mo si admin para dyan!"
+
+CURRENT USER INFO:
+{USER_CONTEXT}`;
+
+async function getBrodContext(userId: number): Promise<string> {
+  const { data: member } = await supabase.from("members").select("first_name, last_name, chapter, batch_name, industry, status").eq("id", userId).single();
+  const { data: dues } = await supabase.from("annual_dues").select("year, amount").eq("member_id", userId);
+  const { data: donations } = await supabase.from("donations").select("amount, date_given").eq("member_id", userId);
+
+  const duesTotal = dues?.reduce((s, d) => s + Number(d.amount), 0) || 0;
+  const donTotal = donations?.reduce((s, d) => s + Number(d.amount), 0) || 0;
+
+  return `
+Name: ${member?.first_name} ${member?.last_name}
+Chapter: ${member?.chapter || "N/A"}, Batch: ${member?.batch_name || "N/A"}, Industry: ${member?.industry || "N/A"}
+Status: ${member?.status || "N/A"}
+Total Dues Paid: ₱${duesTotal.toLocaleString()} (${dues?.length || 0} payments)
+Total Donations: ₱${donTotal.toLocaleString()} (${donations?.length || 0} donations)
+Dues by year: ${(dues || []).map(d => `${d.year}: ₱${Number(d.amount).toLocaleString()}`).join(", ") || "None"}
+`.trim();
+}
+
 export async function POST(req: NextRequest) {
   if (!ANTHROPIC_API_KEY) {
     return NextResponse.json({ error: "Dehins yan brod, wala pang ANTHROPIC_API_KEY!" }, { status: 503 });
   }
 
-  const { messages } = await req.json();
+  const { messages, user_role, user_id, user_name } = await req.json();
   if (!messages?.length) return NextResponse.json({ error: "Messages required" }, { status: 400 });
 
-  const dbContext = await getDbContext();
-  const systemPrompt = SYSTEM_PROMPT.replace("{DB_CONTEXT}", dbContext);
+  const isFullAccess = user_role === "admin" || user_role === "board_member";
+  let systemPrompt: string;
+
+  if (isFullAccess) {
+    const dbContext = await getDbContext();
+    systemPrompt = SYSTEM_PROMPT.replace("{DB_CONTEXT}", dbContext);
+  } else {
+    const userContext = user_id ? await getBrodContext(user_id) : `Name: ${user_name || "Brod"}`;
+    systemPrompt = BROD_SYSTEM_PROMPT.replace("{USER_CONTEXT}", userContext);
+  }
 
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -359,7 +412,9 @@ export async function POST(req: NextRequest) {
 
   const data = await response.json();
   const aiText = data.content?.[0]?.text || "";
-  const { cleanText, actions } = await executeActions(aiText);
+
+  // Only execute actions for admin/board_member
+  const { cleanText, actions } = isFullAccess ? await executeActions(aiText) : { cleanText: aiText, actions: [] };
 
   return NextResponse.json({
     response: cleanText || "Ayos brod! Check mo na lang yung results.",
