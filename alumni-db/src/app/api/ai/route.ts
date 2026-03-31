@@ -64,15 +64,32 @@ You can execute actions by outputting \`\`\`action JSON blocks. Supported action
 {"action":"query_collection_rate","year":"2026"}
 \`\`\`
 
-8. query_members - Search or count members by filters
+8. query_members - Search or count members by any filter (chapter, status, industry, batch, company, title)
 \`\`\`action
-{"action":"query_members","chapter":"Manila|Los Banos|Diliman","status":"active|inactive|immortal","count_only":true}
+{"action":"query_members","chapter":"Manila|Los Banos|Diliman","status":"active|inactive|immortal","industry":"Technology","batch_name":"Alpha","company":"ABC Corp","title":"CEO","count_only":false}
 \`\`\`
 
 9. calculate_finances - Do calculations on financial data (projections, averages, per-member, etc.)
 \`\`\`action
 {"action":"calculate_finances","calculation":"total_per_member|projection|average_dues|expense_ratio","year":"2026"}
 \`\`\`
+
+DATABASE SCHEMA (mga tables at fields na available sa akin):
+- members: id, first_name, last_name, full_name, chapter (Diliman/Los Banos/Manila), batch_name, batch_letter, year, phone_number, current_company, title, INDUSTRY, status (active/inactive/immortal), role (admin/board_member/brod), username
+- annual_dues: id, member_id, year, amount, date_paid, remarks
+- donations: id, member_id, amount, date_given, remarks, transaction_reference
+- events: id, name, description, date, type (event/project), status (upcoming/ongoing/completed)
+- project_tasks: id, event_id, title, description, section, assignee, priority, status, due_date
+- meeting_summaries: id, title, meeting_date, location, participants, agenda, updates, action_items
+- expenditures: id, description, amount, date, event_id, remarks
+
+IMPORTANTE - FIELD NAME FLEXIBILITY:
+Kapag may nagtanong tungkol sa "industry" o "field" o "sector" o "trabaho" o "profession" - alam ko na INDUSTRY field yan sa members table.
+Kapag "company" o "employer" o "work" - CURRENT_COMPANY field yan.
+Kapag "position" o "job title" o "role sa work" - TITLE field yan.
+Kapag "batch" o "group" - BATCH_NAME o BATCH_LETTER yan.
+Kapag "phone" o "number" o "contact" - PHONE_NUMBER yan.
+Huwag mag-assume na wala ang field - check mo muna sa schema ko sa taas!
 
 PARSING INSTRUCTIONS:
 - For unstructured project text: parse into structured project with logical sections and tasks
@@ -82,6 +99,7 @@ PARSING INSTRUCTIONS:
 - For "who hasn't paid" or "unpaid" questions: use query_unpaid_dues
 - For projections, averages, ratios: use calculate_finances
 - You can chain multiple actions in one response
+- Kapag may tanong tungkol sa members by industry/chapter/batch — use query_members action
 
 CURRENT DATABASE STATE:
 {DB_CONTEXT}`;
@@ -143,6 +161,17 @@ async function getDbContext(): Promise<string> {
     supabase.from("meeting_summaries").select("title, meeting_date").order("meeting_date", { ascending: false }).limit(3),
   ]);
 
+  // Get industry and chapter breakdowns
+  const { data: allMembers } = await supabase.from("members").select("industry, chapter").in("status", ["active", "immortal"]);
+  const industries: Record<string, number> = {};
+  const chapters: Record<string, number> = {};
+  for (const m of allMembers || []) {
+    if (m.industry) industries[m.industry] = (industries[m.industry] || 0) + 1;
+    if (m.chapter) chapters[m.chapter] = (chapters[m.chapter] || 0) + 1;
+  }
+  const topIndustries = Object.entries(industries).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([k, v]) => `${k}: ${v}`).join(", ");
+  const chapterBreakdown = Object.entries(chapters).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k}: ${v}`).join(", ");
+
   const duesTotal = dues?.reduce((s, d) => s + Number(d.amount), 0) || 0;
   const donTotal = donations?.reduce((s, d) => s + Number(d.amount), 0) || 0;
   const expTotal = expenditures?.reduce((s, d) => s + Number(d.amount), 0) || 0;
@@ -160,6 +189,9 @@ FINANCES (${y}):
 - Expenditures: ₱${expTotal.toLocaleString()}
 - Net income: ₱${(duesTotal + donTotal - expTotal).toLocaleString()}
 - Unpaid members: ${active - uniquePaid}
+
+Chapters: ${chapterBreakdown || "None"}
+Industries: ${topIndustries || "None"}
 
 Recent members: ${(recentMembers || []).map((m: { first_name: string; last_name: string; chapter: string }) => `${m.first_name} ${m.last_name} (${m.chapter || "N/A"})`).join(", ") || "None"}
 Upcoming events: ${(upcomingEvents || []).map((e: { name: string; date: string; type: string }) => `${e.name} (${e.type}, ${e.date})`).join(", ") || "None"}
@@ -304,19 +336,25 @@ async function executeAction(payload: Record<string, unknown>): Promise<ActionRe
       }
 
       case "query_members": {
-        const q = payload as { chapter?: string; status?: string; count_only?: boolean };
-        let query = supabase.from("members").select(q.count_only ? "*" : "first_name, last_name, chapter, batch_name, year, status", q.count_only ? { count: "exact", head: true } : undefined);
+        const q = payload as { chapter?: string; status?: string; industry?: string; batch_name?: string; title?: string; company?: string; count_only?: boolean };
+        const fields = q.count_only ? "*" : "first_name, last_name, chapter, batch_name, year, status, industry, current_company, title";
+        let query = supabase.from("members").select(fields, q.count_only ? { count: "exact", head: true } : undefined);
         if (q.chapter) query = query.eq("chapter", q.chapter);
         if (q.status) query = query.eq("status", q.status);
+        if (q.industry) query = query.ilike("industry", `%${q.industry}%`);
+        if (q.batch_name) query = query.ilike("batch_name", `%${q.batch_name}%`);
+        if (q.title) query = query.ilike("title", `%${q.title}%`);
+        if (q.company) query = query.ilike("current_company", `%${q.company}%`);
         const { data, count } = await query.order("last_name").limit(30);
 
         if (q.count_only) {
           results.push({ label: `${count || 0} member(s) found`, success: true });
         } else {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const list = (data || []).slice(0, 15).map((m: any) =>
-            `${m.first_name} ${m.last_name} (${m.chapter || "N/A"}, ${m.batch_name || "N/A"})`
-          ).join("\n• ");
+          const list = (data || []).slice(0, 15).map((m: any) => {
+            const details = [m.chapter, m.industry, m.current_company, m.title].filter(Boolean).join(", ");
+            return `${m.first_name} ${m.last_name}${details ? ` (${details})` : ""}`;
+          }).join("\n• ");
           results.push({
             label: `${data?.length || 0} member(s):\n• ${list}${(data?.length || 0) > 15 ? `\n...and ${(data?.length || 0) - 15} more` : ""}`,
             success: true,
