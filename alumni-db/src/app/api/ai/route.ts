@@ -74,6 +74,20 @@ You can execute actions by outputting \`\`\`action JSON blocks. Supported action
 {"action":"calculate_finances","calculation":"total_per_member|projection|average_dues|expense_ratio","year":"2026"}
 \`\`\`
 
+10. query_meetings - Get meeting details, agenda, action items, minutes
+\`\`\`action
+{"action":"query_meetings","meeting_id":1}
+\`\`\`
+Or list all meetings:
+\`\`\`action
+{"action":"query_meetings","list":true}
+\`\`\`
+
+11. query_meeting_action_items - Get all pending action items across meetings
+\`\`\`action
+{"action":"query_meeting_action_items"}
+\`\`\`
+
 DATABASE SCHEMA (mga tables at fields na available sa akin):
 - members: id, first_name, last_name, full_name, chapter (Diliman/Los Banos/Manila), batch_name, batch_letter, year, phone_number, current_company, title, INDUSTRY, status (active/inactive/immortal), role (admin/board_member/brod), username
 - annual_dues: id, member_id, year, amount, date_paid, remarks
@@ -100,6 +114,10 @@ PARSING INSTRUCTIONS:
 - For projections, averages, ratios: use calculate_finances
 - You can chain multiple actions in one response
 - Kapag may tanong tungkol sa members by industry/chapter/batch — use query_members action
+- Kapag may tanong tungkol sa meetings, agenda, o action items — check muna sa CURRENT DATABASE STATE kung nandoon na ang info. Kung hindi, use query_meetings o query_meeting_action_items action.
+- For "what happened in the meeting" o "meeting summary" — use query_meetings with meeting_id
+- For "pending tasks" o "action items" across meetings — use query_meeting_action_items
+- Kung nasa context na ang meeting info, sagutin na directly — huwag nang mag-action block!
 
 CURRENT DATABASE STATE:
 {DB_CONTEXT}`;
@@ -158,7 +176,7 @@ async function getDbContext(): Promise<string> {
     supabase.from("annual_dues").select("member_id").eq("year", y),
     supabase.from("members").select("first_name, last_name, chapter").in("status", ["active", "immortal"]).order("created_at", { ascending: false }).limit(5),
     supabase.from("events").select("name, date, type, status").neq("status", "completed").order("date").limit(5),
-    supabase.from("meeting_summaries").select("title, meeting_date").order("meeting_date", { ascending: false }).limit(3),
+    supabase.from("meeting_summaries").select("id, title, meeting_date, location, participants, agenda, action_items").order("meeting_date", { ascending: false }).limit(5),
   ]);
 
   // Get industry and chapter breakdowns
@@ -195,7 +213,13 @@ Industries: ${topIndustries || "None"}
 
 Recent members: ${(recentMembers || []).map((m: { first_name: string; last_name: string; chapter: string }) => `${m.first_name} ${m.last_name} (${m.chapter || "N/A"})`).join(", ") || "None"}
 Upcoming events: ${(upcomingEvents || []).map((e: { name: string; date: string; type: string }) => `${e.name} (${e.type}, ${e.date})`).join(", ") || "None"}
-Recent meetings: ${(upcomingMeetings || []).map((m: { title: string; meeting_date: string }) => `${m.title || "Untitled"} (${m.meeting_date || "no date"})`).join(", ") || "None"}
+Recent meetings:
+${(upcomingMeetings || []).map((m: { id: number; title: string; meeting_date: string; location: string; participants: { name: string }[]; agenda: { item: string; assigned_to?: string; done?: boolean; action_items?: { task: string; done?: boolean }[] }[]; action_items: { task: string; assigned_to?: string }[] }) => {
+    const pCount = (m.participants || []).length;
+    const agendaItems = (m.agenda || []).map((a, i) => `  ${i + 1}. ${a.done ? "[DONE] " : ""}${a.item}${a.assigned_to ? ` (${a.assigned_to})` : ""}${a.action_items?.length ? ` [${a.action_items.filter(t => !t.done).length} pending tasks]` : ""}`).join("\n");
+    const actionItems = (m.action_items || []).map(a => `  • ${a.task} → ${a.assigned_to || "unassigned"}`).join("\n");
+    return `- #${m.id}: ${m.title || "Untitled"} (${m.meeting_date || "no date"}, ${m.location || "N/A"}, ${pCount} present)${agendaItems ? `\n  Agenda:\n${agendaItems}` : ""}${actionItems ? `\n  Action Items:\n${actionItems}` : ""}`;
+  }).join("\n") || "None"}
 `.trim();
 }
 
@@ -396,6 +420,67 @@ async function executeAction(payload: Record<string, unknown>): Promise<ActionRe
             label += `• Total Income: ₱${totalIncome.toLocaleString()} (Dues ₱${duesTotal.toLocaleString()} + Donations ₱${donTotal.toLocaleString()})\n• Expenditures: ₱${expTotal.toLocaleString()}\n• Net: ₱${(totalIncome - expTotal).toLocaleString()}\n• Paid: ${uniquePaid}/${active} members\n• Per member avg: ₱${active ? (totalIncome / active).toFixed(0) : 0}`;
         }
         results.push({ label, success: true });
+        break;
+      }
+
+      case "query_meetings": {
+        const qm = payload as { meeting_id?: number; list?: boolean };
+        if (qm.meeting_id) {
+          const { data: meeting } = await supabase.from("meeting_summaries").select("*").eq("id", qm.meeting_id).single();
+          if (!meeting) { results.push({ label: "Meeting not found", success: false }); break; }
+          const agenda = (meeting.agenda || []) as { item: string; assigned_to?: string; done?: boolean; notes?: string; action_items?: { task: string; assigned_to?: string; due_date?: string; done?: boolean }[] }[];
+          const agendaText = agenda.map((a, i) => {
+            let text = `${i + 1}. ${a.done ? "[DONE] " : ""}${a.item}${a.assigned_to ? ` (${a.assigned_to})` : ""}`;
+            if (a.notes) text += `\n   Notes: ${a.notes.substring(0, 200)}`;
+            if (a.action_items?.length) {
+              text += `\n   Tasks: ${a.action_items.map(t => `${t.done ? "✓" : "○"} ${t.task}${t.assigned_to ? ` → ${t.assigned_to}` : ""}${t.due_date ? ` (due: ${t.due_date})` : ""}`).join("; ")}`;
+            }
+            return text;
+          }).join("\n");
+          const participants = (meeting.participants || []) as { name: string }[];
+          const actionItems = (meeting.action_items || []) as { task: string; assigned_to?: string; deadline?: string }[];
+          const updates = (meeting.updates || []) as { topic: string; details: string; by?: string }[];
+          let label = `Meeting: ${meeting.title || "Untitled"}\nDate: ${meeting.meeting_date || "N/A"}\nLocation: ${meeting.location || "N/A"}\nAttendance: ${participants.length} present`;
+          if (agenda.length > 0) label += `\n\nAgenda:\n${agendaText}`;
+          if (updates.length > 0) label += `\n\nUpdates:\n${updates.map(u => `• ${u.topic}${u.by ? ` (${u.by})` : ""}: ${u.details.substring(0, 150)}`).join("\n")}`;
+          if (actionItems.length > 0) label += `\n\nAction Items:\n${actionItems.map(a => `• ${a.task} → ${a.assigned_to || "unassigned"}${a.deadline ? ` (due: ${a.deadline})` : ""}`).join("\n")}`;
+          if (meeting.raw_text) label += `\n\nHas raw minutes: Yes (${meeting.raw_text.length} chars)`;
+          results.push({ label, success: true });
+        } else {
+          const { data: meetings } = await supabase.from("meeting_summaries").select("id, title, meeting_date, location, participants, agenda").order("meeting_date", { ascending: false }).limit(20);
+          const list = (meetings || []).map((m) => {
+            const pCount = (m.participants as { name: string }[] || []).length;
+            const aCount = (m.agenda as { item: string }[] || []).length;
+            return `#${m.id}: ${m.title || "Untitled"} (${m.meeting_date || "no date"}) - ${pCount} present, ${aCount} agenda items`;
+          }).join("\n• ");
+          results.push({ label: `${meetings?.length || 0} meeting(s):\n• ${list}`, success: true });
+        }
+        break;
+      }
+
+      case "query_meeting_action_items": {
+        const { data: allMeetings } = await supabase.from("meeting_summaries").select("id, title, meeting_date, agenda, action_items").order("meeting_date", { ascending: false }).limit(10);
+        const pendingItems: string[] = [];
+        for (const m of allMeetings || []) {
+          // From agenda embedded tasks
+          const agenda = (m.agenda || []) as { item: string; action_items?: { task: string; assigned_to?: string; due_date?: string; done?: boolean }[] }[];
+          for (const a of agenda) {
+            for (const t of a.action_items || []) {
+              if (!t.done) pendingItems.push(`[${m.title || "Meeting"}] ${t.task} → ${t.assigned_to || "unassigned"}${t.due_date ? ` (due: ${t.due_date})` : ""}`);
+            }
+          }
+          // From meeting-level action items
+          const actions = (m.action_items || []) as { task: string; assigned_to?: string; deadline?: string }[];
+          for (const a of actions) {
+            pendingItems.push(`[${m.title || "Meeting"}] ${a.task} → ${a.assigned_to || "unassigned"}${a.deadline ? ` (due: ${a.deadline})` : ""}`);
+          }
+        }
+        results.push({
+          label: pendingItems.length > 0
+            ? `${pendingItems.length} pending action item(s):\n• ${pendingItems.slice(0, 20).join("\n• ")}${pendingItems.length > 20 ? `\n...and ${pendingItems.length - 20} more` : ""}`
+            : "No pending action items found",
+          success: true,
+        });
         break;
       }
 
