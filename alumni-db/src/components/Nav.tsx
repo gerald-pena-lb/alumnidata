@@ -11,6 +11,7 @@ const allLinks = [
   { href: "/events", label: "Events", minRole: "board_member" },
   { href: "/meetings", label: "Meetings", minRole: "board_member" },
   { href: "/finances", label: "Finances", minRole: "board_member" },
+  { href: "/news", label: "Masig News", minRole: "brod" },
   { href: "/reports", label: "Reports", minRole: "brod" },
 ];
 

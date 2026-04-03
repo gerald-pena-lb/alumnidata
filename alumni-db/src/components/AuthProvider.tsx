@@ -54,11 +54,13 @@ function checkPermission(role: string | undefined, action: string): boolean {
     "view_tasks", "add_tasks", "edit_tasks", "delete_tasks",
     "upload_csv",
     "edit_profile",
+    "view_news", "post_announcements", "post_achievements", "approve_achievements",
   ];
 
   const brodAllowed = [
     "view_reports",
     "edit_profile",
+    "view_news", "post_achievements",
   ];
 
   if (role === "board_member") return boardMemberAllowed.includes(action);
