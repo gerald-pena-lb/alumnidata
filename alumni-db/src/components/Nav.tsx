@@ -39,7 +39,7 @@ export default function Nav() {
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between h-14 md:h-16">
           <Link href="/" className="font-bold text-lg md:text-xl tracking-tight">
-            UP Alpha Sigma
+            UP Alpha Sigma Fraternity
           </Link>
 
           {/* Desktop nav */}
