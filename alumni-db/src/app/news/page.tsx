@@ -32,9 +32,11 @@ export default function NewsPage() {
   const [uploading, setUploading] = useState(false);
   const [posting, setPosting] = useState(false);
 
-  // Comments
+  // Comments (shared for announcements and achievements)
   const [commentsByAnnouncement, setCommentsByAnnouncement] = useState<Record<number, Comment[]>>({});
+  const [commentsByAchievement, setCommentsByAchievement] = useState<Record<number, Comment[]>>({});
   const [expandedComments, setExpandedComments] = useState<number | null>(null);
+  const [expandedAchComments, setExpandedAchComments] = useState<number | null>(null);
   const [commentDraft, setCommentDraft] = useState("");
 
   // Achievements
@@ -67,6 +69,34 @@ export default function NewsPage() {
     const res = await fetch(`/api/announcements/${announcementId}/comments`);
     const data = await res.json();
     setCommentsByAnnouncement(prev => ({ ...prev, [announcementId]: data }));
+  }
+
+  async function loadAchComments(achievementId: number) {
+    const res = await fetch(`/api/achievements/${achievementId}/comments`);
+    const data = await res.json();
+    setCommentsByAchievement(prev => ({ ...prev, [achievementId]: data }));
+  }
+
+  async function handleDeleteComment(type: "announcement" | "achievement", parentId: number, commentId: number) {
+    if (!confirm("Remove this comment?")) return;
+    if (type === "announcement") {
+      await fetch(`/api/announcements/${parentId}/comments/${commentId}`, { method: "DELETE" });
+      loadComments(parentId);
+    } else {
+      await fetch(`/api/achievements/${parentId}/comments/${commentId}`, { method: "DELETE" });
+      loadAchComments(parentId);
+    }
+  }
+
+  async function handlePostAchComment(achievementId: number) {
+    if (!commentDraft.trim()) return;
+    await fetch(`/api/achievements/${achievementId}/comments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content: commentDraft }),
+    });
+    setCommentDraft("");
+    loadAchComments(achievementId);
   }
 
   async function handleUploadImage(file: File): Promise<string | null> {
@@ -279,8 +309,13 @@ export default function NewsPage() {
                             {(c.members?.first_name || "?").charAt(0)}
                           </div>
                           <div className="bg-gray-50 rounded-lg px-3 py-2 flex-1">
-                            <span className="text-xs font-medium text-gray-900">{c.members?.full_name}</span>
-                            <span className="text-xs text-gray-400 ml-2">{timeAgo(c.created_at)}</span>
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <span className="text-xs font-medium text-gray-900">{c.members?.full_name}</span>
+                                <span className="text-xs text-gray-400 ml-2">{timeAgo(c.created_at)}</span>
+                              </div>
+                              {canPost && <button onClick={() => handleDeleteComment("announcement", a.id, c.id)} className="text-xs text-gray-300 hover:text-red-500">&times;</button>}
+                            </div>
                             <p className="text-sm text-gray-700 mt-0.5">{c.content}</p>
                           </div>
                         </div>
@@ -374,6 +409,48 @@ export default function NewsPage() {
                 <p className="text-sm text-gray-700 whitespace-pre-wrap">{a.content}</p>
                 {a.image_url && (
                   <img src={a.image_url} alt="" className="w-full max-h-96 object-contain rounded-md bg-gray-50 mx-auto block mt-3" />
+                )}
+
+                {/* Achievement Comments */}
+                {a.approved && (
+                  <div className="border-t border-gray-100 pt-3 mt-3">
+                    <button onClick={() => {
+                      if (expandedAchComments === a.id) { setExpandedAchComments(null); } else { setExpandedAchComments(a.id); loadAchComments(a.id); }
+                    }} className="text-xs text-gray-500 hover:text-[#1a3a7a]">
+                      {expandedAchComments === a.id ? "Hide comments" : `Comments${commentsByAchievement[a.id]?.length ? ` (${commentsByAchievement[a.id].length})` : ""}`}
+                    </button>
+
+                    {expandedAchComments === a.id && (
+                      <div className="mt-3 space-y-2">
+                        {(commentsByAchievement[a.id] || []).map((c) => (
+                          <div key={c.id} className="flex gap-2">
+                            <div className="w-7 h-7 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                              {(c.members?.first_name || "?").charAt(0)}
+                            </div>
+                            <div className="bg-gray-50 rounded-lg px-3 py-2 flex-1">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <span className="text-xs font-medium text-gray-900">{c.members?.full_name}</span>
+                                  <span className="text-xs text-gray-400 ml-2">{timeAgo(c.created_at)}</span>
+                                </div>
+                                {canPost && <button onClick={() => handleDeleteComment("achievement", a.id, c.id)} className="text-xs text-gray-300 hover:text-red-500">&times;</button>}
+                              </div>
+                              <p className="text-sm text-gray-700 mt-0.5">{c.content}</p>
+                            </div>
+                          </div>
+                        ))}
+
+                        {isActive && (
+                          <div className="flex gap-2 mt-2">
+                            <input type="text" placeholder="Write a comment..." value={expandedAchComments === a.id ? commentDraft : ""} onChange={(e) => setCommentDraft(e.target.value)}
+                              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handlePostAchComment(a.id); } }}
+                              className="flex-1 border border-gray-300 rounded-full px-3 py-1.5 text-sm" />
+                            <button onClick={() => handlePostAchComment(a.id)} className="px-3 py-1.5 bg-[#1a3a7a] text-white rounded-full text-xs">Post</button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
