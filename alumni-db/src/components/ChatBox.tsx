@@ -139,7 +139,7 @@ export default function ChatBox() {
                 <img src={UBAG_ICON} alt="Ubag" className="w-16 h-16 rounded-full mx-auto border-2 border-[#d4a843]" />
                 <p className="text-gray-800 font-semibold text-sm">Orayt brod! Ako si Ubag!</p>
                 <p className="text-gray-500 text-xs px-4">
-                  Ano bang kailangan mo brod? Pwede akong gumawa ng projects, magdagdag ng brods, at mag-organisa ng tasks. I-paste lang ang data mo o sabihin mo lang!
+                  Anong kelangan mo brod?
                 </p>
               </div>
             )}
