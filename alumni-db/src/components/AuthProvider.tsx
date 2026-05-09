@@ -58,6 +58,7 @@ function checkPermission(role: string | undefined, action: string): boolean {
   ];
 
   const brodAllowed = [
+    "view_events",
     "view_reports",
     "edit_profile",
     "view_news", "post_achievements",

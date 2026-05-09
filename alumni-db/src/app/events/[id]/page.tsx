@@ -4,6 +4,7 @@ import { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import PrintButton from "@/components/PrintButton";
 import PrintHeader from "@/components/PrintHeader";
+import { useAuth } from "@/components/AuthProvider";
 
 interface Task {
   id: number;
@@ -28,9 +29,16 @@ interface EventDetail {
   expenditures: { id: number; description: string; amount: number; date: string; remarks: string }[];
 }
 
+interface AttendeeRecord {
+  member_id: number;
+  created_at: string;
+  members: { id: number; first_name: string; last_name: string; full_name: string; chapter: string };
+}
+
 export default function EventDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
+  const { user, can } = useAuth();
   const [event, setEvent] = useState<EventDetail | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [editing, setEditing] = useState(false);
@@ -44,6 +52,17 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
   const [newSection, setNewSection] = useState("");
   const [showSectionForm, setShowSectionForm] = useState(false);
   const [boardMembers, setBoardMembers] = useState<{ id: number; full_name: string }[]>([]);
+  const [attendance, setAttendance] = useState<AttendeeRecord[]>([]);
+  const [allMembers, setAllMembers] = useState<{ id: number; full_name: string; chapter: string }[]>([]);
+  const [showAttendancePicker, setShowAttendancePicker] = useState(false);
+  const [attendanceSearch, setAttendanceSearch] = useState("");
+
+  const isAdmin = can("edit_events");
+
+  async function loadAttendance() {
+    const res = await fetch(`/api/events/${id}/attendance`);
+    if (res.ok) setAttendance(await res.json());
+  }
 
   async function load() {
     const [eventRes, tasksRes] = await Promise.all([
@@ -64,11 +83,13 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
     if (tasksRes.ok) {
       setTasks(await tasksRes.json());
     }
+    loadAttendance();
   }
 
   useEffect(() => {
     load();
     fetch("/api/members?role=board_and_admin").then((r) => r.json()).then(setBoardMembers);
+    fetch("/api/members?all=true").then((r) => r.ok ? r.json() : []).then(setAllMembers);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
@@ -193,12 +214,16 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
         </div>
         <div className="flex gap-2">
           <PrintButton label="Save PDF" />
-          <button onClick={() => setEditing(!editing)} className="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm hover:bg-gray-50">
-            {editing ? "Cancel" : "Edit"}
-          </button>
-          <button onClick={handleDelete} className="px-4 py-2 bg-red-600 text-white rounded-md text-sm hover:bg-red-700">
-            Delete
-          </button>
+          {isAdmin && (
+            <>
+              <button onClick={() => setEditing(!editing)} className="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm hover:bg-gray-50">
+                {editing ? "Cancel" : "Edit"}
+              </button>
+              <button onClick={handleDelete} className="px-4 py-2 bg-red-600 text-white rounded-md text-sm hover:bg-red-700">
+                Delete
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -236,18 +261,135 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
         )}
       </div>
 
+      {/* Attendance */}
+      <div className="bg-white rounded-lg shadow p-6 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <h2 className="text-lg font-semibold text-gray-900">Attendance</h2>
+            <span className="text-sm text-gray-500">{attendance.length} present</span>
+          </div>
+          <div className="flex gap-2">
+            {user && !attendance.some((a) => a.member_id === user.id) ? (
+              <button
+                onClick={async () => {
+                  await fetch(`/api/events/${id}/attendance`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({}),
+                  });
+                  loadAttendance();
+                }}
+                className="px-3 py-1.5 bg-green-600 text-white rounded-md text-sm hover:bg-green-700"
+              >
+                I&apos;m Present
+              </button>
+            ) : user && attendance.some((a) => a.member_id === user.id) ? (
+              <button
+                onClick={async () => {
+                  await fetch(`/api/events/${id}/attendance`, {
+                    method: "DELETE",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ member_id: user.id }),
+                  });
+                  loadAttendance();
+                }}
+                className="px-3 py-1.5 bg-white border border-gray-300 text-gray-600 rounded-md text-sm hover:bg-gray-50"
+              >
+                Remove Me
+              </button>
+            ) : null}
+            {isAdmin && (
+              <button
+                onClick={() => { setShowAttendancePicker(!showAttendancePicker); setAttendanceSearch(""); }}
+                className="px-3 py-1.5 bg-[#1a3a7a] text-white rounded-md text-sm hover:bg-[#0f2654]"
+              >
+                + Add Member
+              </button>
+            )}
+          </div>
+        </div>
+
+        {showAttendancePicker && isAdmin && (
+          <div className="bg-gray-50 rounded-md p-4 mb-4">
+            <input
+              type="text"
+              placeholder="Search members..."
+              value={attendanceSearch}
+              onChange={(e) => setAttendanceSearch(e.target.value)}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm mb-3"
+            />
+            <div className="max-h-48 overflow-y-auto space-y-1">
+              {allMembers
+                .filter((m) => !attendance.some((a) => a.member_id === m.id))
+                .filter((m) => !attendanceSearch || m.full_name.toLowerCase().includes(attendanceSearch.toLowerCase()))
+                .slice(0, 20)
+                .map((m) => (
+                  <button
+                    key={m.id}
+                    onClick={async () => {
+                      await fetch(`/api/events/${id}/attendance`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ member_id: m.id }),
+                      });
+                      loadAttendance();
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm rounded hover:bg-blue-50 flex justify-between items-center"
+                  >
+                    <span>{m.full_name}</span>
+                    <span className="text-xs text-gray-400">{m.chapter}</span>
+                  </button>
+                ))}
+            </div>
+          </div>
+        )}
+
+        {attendance.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            {attendance.map((a) => (
+              <div key={a.member_id} className="flex items-center justify-between bg-gray-50 rounded-md px-3 py-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
+                  <span className="text-sm text-gray-800">{a.members?.full_name || "Unknown"}</span>
+                  {a.members?.chapter && <span className="text-xs text-gray-400">({a.members.chapter})</span>}
+                </div>
+                {isAdmin && (
+                  <button
+                    onClick={async () => {
+                      await fetch(`/api/events/${id}/attendance`, {
+                        method: "DELETE",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ member_id: a.member_id }),
+                      });
+                      loadAttendance();
+                    }}
+                    className="text-gray-300 hover:text-red-500 text-sm"
+                  >
+                    &times;
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-gray-400 text-sm">No attendance recorded yet</div>
+        )}
+      </div>
+
       {/* Sections & Tasks */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-gray-900">Sections & Tasks</h2>
-          <div className="flex gap-2">
-            <button onClick={() => setShowSectionForm(!showSectionForm)} className="px-3 py-1.5 bg-white border border-gray-300 rounded-md text-sm hover:bg-gray-50">
-              + Section
-            </button>
-            <button onClick={() => { setTaskForm((f) => ({ ...f, section: "" })); setShowTaskForm(!showTaskForm); }} className="px-3 py-1.5 bg-[#1a3a7a] text-white rounded-md text-sm hover:bg-[#0f2654]">
-              + Task
-            </button>
-          </div>
+          {isAdmin && (
+            <div className="flex gap-2">
+              <button onClick={() => setShowSectionForm(!showSectionForm)} className="px-3 py-1.5 bg-white border border-gray-300 rounded-md text-sm hover:bg-gray-50">
+                + Section
+              </button>
+              <button onClick={() => { setTaskForm((f) => ({ ...f, section: "" })); setShowTaskForm(!showTaskForm); }} className="px-3 py-1.5 bg-[#1a3a7a] text-white rounded-md text-sm hover:bg-[#0f2654]">
+                + Task
+              </button>
+            </div>
+          )}
         </div>
 
         {showSectionForm && (
@@ -306,21 +448,30 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                     </div>
                     <span>{progress}%</span>
                   </div>
-                  <button onClick={() => { setTaskForm((f) => ({ ...f, section })); setShowTaskForm(true); }} className="text-xs text-[#1a3a7a] hover:underline">+ Task</button>
+                  {isAdmin && <button onClick={() => { setTaskForm((f) => ({ ...f, section })); setShowTaskForm(true); }} className="text-xs text-[#1a3a7a] hover:underline">+ Task</button>}
                 </div>
               </div>
               <div className="divide-y divide-gray-50">
                 {sectionTasks.map((task) => (
                   <div key={task.id} className="px-5 py-3 flex items-center gap-3 hover:bg-gray-50">
-                    <button
-                      onClick={() => moveTask(task.id, task.status === "todo" ? "in_progress" : task.status === "in_progress" ? "done" : "todo")}
-                      className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                    {isAdmin ? (
+                      <button
+                        onClick={() => moveTask(task.id, task.status === "todo" ? "in_progress" : task.status === "in_progress" ? "done" : "todo")}
+                        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                          task.status === "done" ? "bg-green-500 border-green-500 text-white" :
+                          task.status === "in_progress" ? "border-yellow-400 bg-yellow-50" : "border-gray-300"
+                        }`}
+                      >
+                        {task.status === "done" && <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                      </button>
+                    ) : (
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
                         task.status === "done" ? "bg-green-500 border-green-500 text-white" :
                         task.status === "in_progress" ? "border-yellow-400 bg-yellow-50" : "border-gray-300"
-                      }`}
-                    >
-                      {task.status === "done" && <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
-                    </button>
+                      }`}>
+                        {task.status === "done" && <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                      </div>
+                    )}
                     <div className="flex-1 min-w-0">
                       <div className={`text-sm ${task.status === "done" ? "line-through text-gray-400" : "text-gray-900"}`}>{task.title}</div>
                       {task.description && <div className="text-xs text-gray-400 truncate">{task.description}</div>}
@@ -330,7 +481,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                       {task.due_date && <span className="text-xs text-gray-400">{task.due_date}</span>}
                       <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${statusColors[task.status]}`}>{statusLabels[task.status]}</span>
                       <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${priorityColors[task.priority]}`}>{task.priority}</span>
-                      <button onClick={() => deleteTask(task.id)} className="text-gray-300 hover:text-red-500 text-sm">&times;</button>
+                      {isAdmin && <button onClick={() => deleteTask(task.id)} className="text-gray-300 hover:text-red-500 text-sm">&times;</button>}
                     </div>
                   </div>
                 ))}
@@ -350,9 +501,11 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
       <div className="bg-white rounded-lg shadow p-6 mb-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-gray-900">Meeting Minutes</h2>
-          <button onClick={() => setShowMinuteForm(!showMinuteForm)} className="px-3 py-1.5 bg-[#1a3a7a] text-white rounded-md text-sm hover:bg-[#0f2654]">
-            Add Minutes
-          </button>
+          {isAdmin && (
+            <button onClick={() => setShowMinuteForm(!showMinuteForm)} className="px-3 py-1.5 bg-[#1a3a7a] text-white rounded-md text-sm hover:bg-[#0f2654]">
+              Add Minutes
+            </button>
+          )}
         </div>
 
         {showMinuteForm && (
@@ -376,9 +529,11 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
       <div className="bg-white rounded-lg shadow p-6 mb-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-gray-900">Goals</h2>
-          <button onClick={() => setShowGoalForm(!showGoalForm)} className="px-3 py-1.5 bg-[#1a3a7a] text-white rounded-md text-sm hover:bg-[#0f2654]">
-            Add Goal
-          </button>
+          {isAdmin && (
+            <button onClick={() => setShowGoalForm(!showGoalForm)} className="px-3 py-1.5 bg-[#1a3a7a] text-white rounded-md text-sm hover:bg-[#0f2654]">
+              Add Goal
+            </button>
+          )}
         </div>
 
         {showGoalForm && (

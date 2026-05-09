@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useAuth } from "@/components/AuthProvider";
 
 interface Event {
   id: number;
@@ -14,6 +15,7 @@ interface Event {
 
 export default function EventsPage() {
   const [events, setEvents] = useState<Event[]>([]);
+  const { can } = useAuth();
 
   useEffect(() => {
     fetch("/api/events?type=event").then((r) => r.json()).then(setEvents);
@@ -23,12 +25,14 @@ export default function EventsPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Events</h1>
-        <Link
-          href="/events/new?type=event"
-          className="px-4 py-2 bg-[#1a3a7a] text-white rounded-md text-sm hover:bg-[#0f2654]"
-        >
-          New Event
-        </Link>
+        {can("add_events") && (
+          <Link
+            href="/events/new?type=event"
+            className="px-4 py-2 bg-[#1a3a7a] text-white rounded-md text-sm hover:bg-[#0f2654]"
+          >
+            New Event
+          </Link>
+        )}
       </div>
 
       <div className="grid gap-4">
